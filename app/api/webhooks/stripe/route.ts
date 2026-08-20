@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { getStripe } from '@/lib/stripe';
 import { getSql } from '@/lib/db';
+import { ensureCommerceSchema } from '@/lib/commerce-schema';
 
 export async function POST(request: Request) {
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
@@ -25,6 +26,7 @@ export async function POST(request: Request) {
     const email = session.customer_details?.email || session.customer_email;
 
     if (sessionKey && email) {
+      await ensureCommerceSchema();
       const sql = getSql();
       const rows = await sql`
         select cart_snapshot, status from public.checkout_sessions
