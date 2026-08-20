@@ -8,6 +8,7 @@ type CountRow = { count?: number };
 export async function GET() {
   const checks = {
     databaseConfigured: Boolean(process.env.DATABASE_URL),
+    ownerOperationsConfigured: Boolean(process.env.OWNER_OPERATIONS_TOKEN),
     stripeConfigured: Boolean(process.env.STRIPE_SECRET_KEY),
     webhookConfigured: Boolean(process.env.STRIPE_WEBHOOK_SECRET),
     appUrlConfigured: Boolean(process.env.NEXT_PUBLIC_APP_URL),
