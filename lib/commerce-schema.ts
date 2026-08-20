@@ -63,11 +63,19 @@ async function createSchema() {
     shipping_address jsonb,
     billing_address jsonb,
     stripe_session_id text,
+    tracking_carrier text,
+    tracking_number text,
+    shipped_at timestamptz,
+    delivered_at timestamptz,
     created_at timestamptz not null default now(),
     updated_at timestamptz not null default now()
   )`;
 
   await sql`alter table public.orders add column if not exists stripe_session_id text`;
+  await sql`alter table public.orders add column if not exists tracking_carrier text`;
+  await sql`alter table public.orders add column if not exists tracking_number text`;
+  await sql`alter table public.orders add column if not exists shipped_at timestamptz`;
+  await sql`alter table public.orders add column if not exists delivered_at timestamptz`;
 
   await sql`create table if not exists public.order_items (
     id uuid primary key default gen_random_uuid(),
@@ -99,6 +107,7 @@ async function createSchema() {
   await sql`create index if not exists products_active_idx on public.products(is_active, source_verified)`;
   await sql`create index if not exists orders_customer_id_idx on public.orders(customer_id)`;
   await sql`create index if not exists orders_created_at_idx on public.orders(created_at desc)`;
+  await sql`create index if not exists orders_fulfillment_idx on public.orders(fulfillment_status, created_at desc)`;
   await sql`create index if not exists order_items_order_id_idx on public.order_items(order_id)`;
   await sql`create index if not exists customer_addresses_customer_id_idx on public.customer_addresses(customer_id)`;
 }
