@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useState } from 'react';
 
+// Owner Operations Dashboard: environment-gated and session-token protected.
 type Readiness = {
   ready?: boolean;
   verifiedSellableProducts?: number;
