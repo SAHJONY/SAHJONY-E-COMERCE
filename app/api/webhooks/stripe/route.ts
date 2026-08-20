@@ -32,6 +32,19 @@ export async function POST(request: Request) {
     if (sessionKey && email) {
       await ensureCommerceSchema();
       const sql = getSql();
+
+      const existingOrders = (await sql`
+        select id from public.orders where stripe_session_id = ${session.id} limit 1
+      `) as unknown as IdRow[];
+      if (existingOrders[0]?.id) {
+        await sql`
+          update public.checkout_sessions
+          set status = 'completed', updated_at = now()
+          where session_key = ${sessionKey}
+        `;
+        return NextResponse.json({ received: true, duplicate: true });
+      }
+
       const rows = (await sql`
         select cart_snapshot, status from public.checkout_sessions
         where session_key = ${sessionKey}
@@ -56,12 +69,13 @@ export async function POST(request: Request) {
           insert into public.orders (
             order_number, customer_id, email, currency, status, payment_status,
             fulfillment_status, subtotal_cents, shipping_cents, tax_cents, total_cents,
-            shipping_address, billing_address
+            shipping_address, billing_address, stripe_session_id
           ) values (
             ${orderNumber}, ${customerId}, ${email.toLowerCase()}, 'USD', 'confirmed', 'paid',
             'unfulfilled', ${subtotal}, 0, 0, ${session.amount_total ?? subtotal},
             ${JSON.stringify(session.customer_details?.address ?? null)}::jsonb,
-            ${JSON.stringify(session.customer_details?.address ?? null)}::jsonb
+            ${JSON.stringify(session.customer_details?.address ?? null)}::jsonb,
+            ${session.id}
           ) returning id
         `) as unknown as IdRow[];
         const orderId = orders[0]?.id;
@@ -76,7 +90,7 @@ export async function POST(request: Request) {
 
         await sql`
           update public.checkout_sessions
-          set status = 'completed', updated_at = now()
+          set status = 'completed', stripe_session_id = ${session.id}, updated_at = now()
           where session_key = ${sessionKey}
         `;
       }
