@@ -3,7 +3,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "SAHJONY | Premium Brands for Less",
-  description: "Independent multi-brand premium retailer powered by intelligent sourcing and controlled fulfillment.",
+  description: "Discover premium brands, distinctive selections and exceptional value at SAHJONY.",
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
