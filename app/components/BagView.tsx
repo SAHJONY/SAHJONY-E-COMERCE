@@ -26,10 +26,10 @@ export default function BagView() {
     persist(next);
   }
 
-  if (!items.length) return <section className="bag-empty"><p>YOUR BAG</p><h1>Quiet for now.</h1><span>Discover something exceptional and it will appear here.</span><Link className="button-dark" href="/#shop">EXPLORE THE EDIT</Link></section>;
+  if (!items.length) return <section className="bag-empty"><p>YOUR BAG</p><h1>Quiet for now.</h1><span>Discover something exceptional and it will appear here.</span><Link className="button-dark" href="/discover">DISCOVER SAHJONY</Link></section>;
 
   return <section className="bag-layout">
     <div className="bag-items"><p className="micro">YOUR SELECTION</p><h1>Shopping Bag</h1>{items.map((item) => <article className="bag-row" key={item.slug}><div><Link href={`/product/${item.slug}`}>{item.name}</Link><span>${item.price.toLocaleString()}</span></div><div className="bag-quantity"><button onClick={() => change(item.slug,-1)} aria-label={`Remove one ${item.name}`}>−</button><b>{item.quantity}</b><button onClick={() => change(item.slug,1)} aria-label={`Add one ${item.name}`}>+</button></div><strong>${(item.price*item.quantity).toLocaleString()}</strong></article>)}</div>
-    <aside className="bag-summary"><p className="micro">ORDER SUMMARY</p><div><span>Subtotal</span><b>${subtotal.toLocaleString()}</b></div><div><span>Delivery</span><b>Calculated later</b></div><div className="bag-total"><span>Estimated total</span><strong>${subtotal.toLocaleString()}</strong></div><button type="button" disabled>SECURE CHECKOUT — COMING NEXT</button><small>Checkout remains disabled until payments, tax and order persistence are verified.</small></aside>
+    <aside className="bag-summary"><p className="micro">ORDER SUMMARY</p><div><span>Subtotal</span><b>${subtotal.toLocaleString()}</b></div><div><span>Delivery</span><b>Calculated at checkout</b></div><div className="bag-total"><span>Estimated total</span><strong>${subtotal.toLocaleString()}</strong></div><Link className="button-dark" href="/checkout" style={{display:'block',textAlign:'center'}}>CONTINUE TO SECURE CHECKOUT</Link><small>Payment capture remains disabled until payments, tax and order persistence are verified.</small></aside>
   </section>;
 }
