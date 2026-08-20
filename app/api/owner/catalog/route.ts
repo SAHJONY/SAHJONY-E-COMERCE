@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { timingSafeEqual } from 'crypto';
 import { getSql } from '@/lib/db';
 import { ensureCommerceSchema } from '@/lib/commerce-schema';
+import { writeOwnerAudit } from '@/lib/owner-audit';
 
 type CatalogItemInput = {
   slug?: string;
@@ -110,6 +111,18 @@ export async function POST(request: Request) {
           source_verified = excluded.source_verified,
           updated_at = now()
       `;
+      await writeOwnerAudit({
+        action: 'catalog.upsert',
+        entityType: 'product',
+        entityId: item.slug,
+        metadata: {
+          sku: item.sku,
+          inventoryQuantity: item.inventoryQuantity,
+          isActive: item.isActive,
+          sourceVerified: item.sourceVerified,
+          priceCents: item.priceCents,
+        },
+      });
       updated.push(item.slug);
     }
 
