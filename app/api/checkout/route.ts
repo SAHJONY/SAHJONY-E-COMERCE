@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { randomUUID } from 'crypto';
 import { getSql } from '@/lib/db';
 import { getStripe } from '@/lib/stripe';
+import { ensureCommerceSchema } from '@/lib/commerce-schema';
 import { publicProducts } from '@/lib/public-catalog';
 
 type CheckoutItem = { slug: string; quantity: number };
@@ -19,6 +20,8 @@ export async function POST(request: Request) {
     if (!process.env.STRIPE_SECRET_KEY) {
       return NextResponse.json({ error: 'payments_not_ready' }, { status: 503 });
     }
+
+    await ensureCommerceSchema();
 
     const body = (await request.json()) as CheckoutRequest;
     const email = body.email?.trim().toLowerCase();
