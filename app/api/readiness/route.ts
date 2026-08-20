@@ -8,6 +8,7 @@ export async function GET() {
     stripeConfigured: Boolean(process.env.STRIPE_SECRET_KEY),
     webhookConfigured: Boolean(process.env.STRIPE_WEBHOOK_SECRET),
     appUrlConfigured: Boolean(process.env.NEXT_PUBLIC_APP_URL),
+    liveSalesEnabled: process.env.COMMERCE_LIVE_SALES_ENABLED === 'true',
     databaseConnected: false,
     ledgerReady: false,
   };
