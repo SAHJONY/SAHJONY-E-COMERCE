@@ -16,7 +16,15 @@ type CatalogItemInput = {
   inventoryQuantity?: number;
   isActive?: boolean;
   sourceVerified?: boolean;
+  sourceVerificationMethod?: string | null;
 };
+
+const allowedVerificationMethods = new Set([
+  'brand_direct_account',
+  'authorized_distributor_account',
+  'authorized_wholesale_invoice',
+  'owned_inventory_receipt',
+]);
 
 function authorized(request: Request) {
   const configured = process.env.OWNER_OPERATIONS_TOKEN;
@@ -37,12 +45,17 @@ function normalize(item: CatalogItemInput) {
   const inventoryQuantity = Math.max(0, Math.floor(Number(item.inventoryQuantity ?? 0)));
   const currency = String(item.currency ?? 'USD').trim().toUpperCase();
   const imageUrl = item.imageUrl ? String(item.imageUrl).trim() : null;
+  const sourceVerified = item.sourceVerified === true;
+  const sourceVerificationMethod = item.sourceVerificationMethod ? String(item.sourceVerificationMethod).trim() : null;
 
   if (!slug || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)) throw new Error('invalid_slug');
   if (!sku || !name || !brand) throw new Error('required_fields_missing');
   if (!Number.isFinite(priceCents) || priceCents <= 0) throw new Error('invalid_price');
   if (compareAtCents != null && (!Number.isFinite(compareAtCents) || compareAtCents < priceCents)) throw new Error('invalid_compare_at');
   if (currency !== 'USD') throw new Error('unsupported_currency');
+  if (sourceVerified && (!sourceVerificationMethod || !allowedVerificationMethods.has(sourceVerificationMethod))) {
+    throw new Error('verification_evidence_required');
+  }
 
   return {
     slug,
@@ -55,7 +68,8 @@ function normalize(item: CatalogItemInput) {
     currency,
     imageUrl,
     isActive: item.isActive === true,
-    sourceVerified: item.sourceVerified === true,
+    sourceVerified,
+    sourceVerificationMethod: sourceVerified ? sourceVerificationMethod : null,
   };
 }
 
@@ -67,7 +81,8 @@ export async function GET(request: Request) {
   const sql = getSql();
   const products = await sql`
     select slug, sku, brand, name, price_cents, compare_at_cents, currency, image_url,
-           inventory_quantity, is_active, source_verified, created_at, updated_at
+           inventory_quantity, is_active, source_verified, source_verified_at,
+           source_verification_method, created_at, updated_at
     from public.products
     order by updated_at desc
   `;
@@ -92,11 +107,14 @@ export async function POST(request: Request) {
       await sql`
         insert into public.products (
           slug, sku, brand, name, price_cents, compare_at_cents, currency, image_url,
-          inventory_quantity, is_active, source_verified, updated_at
+          inventory_quantity, is_active, source_verified, source_verified_at,
+          source_verification_method, updated_at
         ) values (
           ${item.slug}, ${item.sku}, ${item.brand}, ${item.name}, ${item.priceCents},
           ${item.compareAtCents}, ${item.currency}, ${item.imageUrl}, ${item.inventoryQuantity},
-          ${item.isActive}, ${item.sourceVerified}, now()
+          ${item.isActive}, ${item.sourceVerified},
+          ${item.sourceVerified ? new Date().toISOString() : null},
+          ${item.sourceVerificationMethod}, now()
         )
         on conflict (slug) do update set
           sku = excluded.sku,
@@ -109,6 +127,12 @@ export async function POST(request: Request) {
           inventory_quantity = excluded.inventory_quantity,
           is_active = excluded.is_active,
           source_verified = excluded.source_verified,
+          source_verified_at = case
+            when excluded.source_verified = true and public.products.source_verified = false then now()
+            when excluded.source_verified = false then null
+            else public.products.source_verified_at
+          end,
+          source_verification_method = excluded.source_verification_method,
           updated_at = now()
       `;
       await writeOwnerAudit({
@@ -120,6 +144,7 @@ export async function POST(request: Request) {
           inventoryQuantity: item.inventoryQuantity,
           isActive: item.isActive,
           sourceVerified: item.sourceVerified,
+          sourceVerificationMethod: item.sourceVerificationMethod,
           priceCents: item.priceCents,
         },
       });
@@ -129,7 +154,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ updated, count: updated.length });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'catalog_update_failed';
-    const known = ['invalid_slug','required_fields_missing','invalid_price','invalid_compare_at','unsupported_currency'];
+    const known = ['invalid_slug','required_fields_missing','invalid_price','invalid_compare_at','unsupported_currency','verification_evidence_required'];
     return NextResponse.json({ error: known.includes(message) ? message : 'catalog_update_failed' }, { status: known.includes(message) ? 400 : 503 });
   }
 }
