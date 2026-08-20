@@ -3,6 +3,7 @@ import Stripe from 'stripe';
 import { getStripe } from '@/lib/stripe';
 import { getSql } from '@/lib/db';
 import { ensureCommerceSchema } from '@/lib/commerce-schema';
+import { consumeReservation, releaseReservation } from '@/lib/inventory-reservations';
 
 type CheckoutSnapshotItem = { slug:string; name:string; unitPriceCents:number; quantity:number; image?:string };
 type CheckoutRow = { cart_snapshot?: CheckoutSnapshotItem[]; status?: string };
@@ -24,6 +25,22 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'invalid_signature' }, { status: 400 });
   }
 
+  if (event.type === 'checkout.session.expired') {
+    const session = event.data.object as Stripe.Checkout.Session;
+    const sessionKey = session.metadata?.sahjony_session_key;
+    if (sessionKey) {
+      await ensureCommerceSchema();
+      await releaseReservation(sessionKey);
+      const sql = getSql();
+      await sql`
+        update public.checkout_sessions
+        set status = 'expired', updated_at = now()
+        where session_key = ${sessionKey} and status <> 'completed'
+      `;
+    }
+    return NextResponse.json({ received: true });
+  }
+
   if (event.type === 'checkout.session.completed') {
     const session = event.data.object as Stripe.Checkout.Session;
     const sessionKey = session.metadata?.sahjony_session_key;
@@ -37,6 +54,7 @@ export async function POST(request: Request) {
         select id from public.orders where stripe_session_id = ${session.id} limit 1
       `) as unknown as IdRow[];
       if (existingOrders[0]?.id) {
+        await consumeReservation(sessionKey);
         await sql`
           update public.checkout_sessions
           set status = 'completed', updated_at = now()
@@ -88,6 +106,7 @@ export async function POST(request: Request) {
           `;
         }
 
+        await consumeReservation(sessionKey);
         await sql`
           update public.checkout_sessions
           set status = 'completed', stripe_session_id = ${session.id}, updated_at = now()
