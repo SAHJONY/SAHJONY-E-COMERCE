@@ -89,7 +89,7 @@ export async function POST(request: Request) {
 
     await sql`
       update public.checkout_sessions
-      set status = 'stripe_created', updated_at = now()
+      set stripe_session_id = ${stripeSession.id}, status = 'stripe_created', updated_at = now()
       where session_key = ${sessionKey}
     `;
 
