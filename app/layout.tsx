@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import "./commerce.css";
+import "./bag.css";
 
 export const metadata: Metadata = {
   title: "SAHJONY | Premium Brands for Less",
