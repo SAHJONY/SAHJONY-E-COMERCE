@@ -4,6 +4,19 @@ import { getSql } from '@/lib/db';
 import { ensureCommerceSchema } from '@/lib/commerce-schema';
 import { writeOwnerAudit } from '@/lib/owner-audit';
 
+type ProductRow = {
+  slug?: string;
+  sku?: string | null;
+  inventory_quantity?: number | string;
+  is_active?: boolean;
+  source_verified?: boolean;
+};
+
+type ReservationRow = {
+  product_slug?: string;
+  reserved_quantity?: number | string;
+};
+
 function authorized(request: Request) {
   const configured = process.env.OWNER_OPERATIONS_TOKEN;
   const supplied = request.headers.get('x-owner-token');
@@ -28,22 +41,22 @@ export async function GET(request: Request) {
   `) as unknown as Array<{ exists?: boolean }>;
 
   const reservationTableExists = hasReservations[0]?.exists === true;
-  const products = await sql`
+  const products = (await sql`
     select slug, sku, inventory_quantity, is_active, source_verified
     from public.products
     order by updated_at desc
-  `;
+  `) as unknown as ProductRow[];
 
-  let reserved: unknown[] = [];
+  let reserved: ReservationRow[] = [];
   let expiredReservations = 0;
   if (reservationTableExists) {
-    reserved = await sql`
+    reserved = (await sql`
       select product_slug, sum(quantity)::int as reserved_quantity
       from public.inventory_reservations
       where status = 'reserved' and expires_at > now()
       group by product_slug
       order by product_slug
-    `;
+    `) as unknown as ReservationRow[];
 
     const expired = (await sql`
       select count(*)::int as count
@@ -53,13 +66,10 @@ export async function GET(request: Request) {
     expiredReservations = Number(expired[0]?.count ?? 0);
   }
 
-  const negativeInventory = Array.isArray(products)
-    ? products.filter((row: any) => Number(row.inventory_quantity) < 0).length
-    : 0;
-
-  const sellable = Array.isArray(products)
-    ? products.filter((row: any) => row.is_active === true && row.source_verified === true && Number(row.inventory_quantity) > 0).length
-    : 0;
+  const negativeInventory = products.filter((row) => Number(row.inventory_quantity ?? 0) < 0).length;
+  const sellable = products.filter(
+    (row) => row.is_active === true && row.source_verified === true && Number(row.inventory_quantity ?? 0) > 0,
+  ).length;
 
   const healthy = negativeInventory === 0 && expiredReservations === 0;
   return NextResponse.json({
