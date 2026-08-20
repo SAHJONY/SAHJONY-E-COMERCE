@@ -14,7 +14,10 @@ export async function GET() {
     liveSalesEnabled: process.env.COMMERCE_LIVE_SALES_ENABLED === 'true',
     databaseConnected: false,
     ledgerReady: false,
+    verifiedInventoryReady: false,
   };
+
+  let verifiedSellableProducts = 0;
 
   if (checks.databaseConfigured) {
     try {
@@ -26,15 +29,24 @@ export async function GET() {
         select count(*)::int as count
         from information_schema.tables
         where table_schema = 'public'
-          and table_name in ('customers','orders','order_items','checkout_sessions')
+          and table_name in ('products','customers','orders','order_items','checkout_sessions')
       `) as unknown as CountRow[];
-      checks.ledgerReady = Number(tables[0]?.count ?? 0) === 4;
+      checks.ledgerReady = Number(tables[0]?.count ?? 0) === 5;
+
+      const inventory = (await sql`
+        select count(*)::int as count
+        from public.products
+        where is_active = true and source_verified = true and inventory_quantity > 0
+      `) as unknown as CountRow[];
+      verifiedSellableProducts = Number(inventory[0]?.count ?? 0);
+      checks.verifiedInventoryReady = verifiedSellableProducts > 0;
     } catch {
       checks.databaseConnected = false;
       checks.ledgerReady = false;
+      checks.verifiedInventoryReady = false;
     }
   }
 
   const ready = Object.values(checks).every(Boolean);
-  return NextResponse.json({ service: 'sahjony-commerce', ready, checks }, { status: ready ? 200 : 503 });
+  return NextResponse.json({ service: 'sahjony-commerce', ready, verifiedSellableProducts, checks }, { status: ready ? 200 : 503 });
 }
