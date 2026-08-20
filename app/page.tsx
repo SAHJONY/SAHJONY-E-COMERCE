@@ -16,12 +16,12 @@ export default function Home() {
       <nav className="nav">
         <button className="nav-icon" aria-label="Open menu">☰</button>
         <a className="wordmark" href="#top" aria-label="SAHJONY home">SAHJONY</a>
-        <div className="nav-actions"><a href="#shop">SHOP</a><a href="#world">THE WORLD OF SAHJONY</a><a href="#client">CLIENT SERVICES</a><button aria-label="Search">SEARCH</button><button aria-label="Shopping bag">BAG · 0</button></div>
+        <div className="nav-actions"><a href="#shop">SHOP</a><a href="#world">THE WORLD OF SAHJONY</a><a href="#client">CLIENT SERVICES</a><Link href="/discover">SEARCH</Link><Link href="/saved">SAVED</Link><Link href="/bag">BAG</Link></div>
       </nav>
 
       <section className="cinema-hero" id="top">
         <div className="hero-media"></div><div className="hero-vignette"></div>
-        <div className="hero-content"><p className="micro light">THE NEW STANDARD IN PREMIUM RETAIL</p><h1><span>PREMIUM</span><span>BRANDS</span><em>FOR LESS.</em></h1><p className="hero-sub">The world&apos;s most desirable categories, presented with cinematic clarity and an uncompromising eye for quality.</p><div className="hero-actions"><a className="button-glass" href="#shop">ENTER THE COLLECTION</a><a className="hero-link" href="#world">DISCOVER SAHJONY <span>↗</span></a></div></div>
+        <div className="hero-content"><p className="micro light">THE NEW STANDARD IN PREMIUM RETAIL</p><h1><span>PREMIUM</span><span>BRANDS</span><em>FOR LESS.</em></h1><p className="hero-sub">The world&apos;s most desirable categories, presented with cinematic clarity and an uncompromising eye for quality.</p><div className="hero-actions"><a className="button-glass" href="#shop">ENTER THE COLLECTION</a><Link className="hero-link" href="/discover">DISCOVER SAHJONY <span>↗</span></Link></div></div>
         <div className="hero-caption"><span>SAHJONY / 001</span><span>ULTRA PREMIUM COMMERCE</span></div><div className="scroll-mark">SCROLL <span>↓</span></div>
       </section>
 
@@ -42,9 +42,9 @@ export default function Home() {
 
       <section className="client-suite" id="client"><div className="client-kicker">SAHJONY PRIVATE CLIENT</div><div className="client-grid"><div><h2>A personal layer<br/>to digital luxury.</h2></div><div><p>For product discovery, gifting, special requests and premium assistance, SAHJONY Client Services delivers a more considered experience.</p><a className="button-dark" href="mailto:clientservices@sahjony.com">CONTACT CLIENT SERVICES</a></div></div></section>
 
-      <section className="closing-film"><div className="closing-image"></div><div className="closing-shade"></div><div className="closing-content"><p>SAHJONY</p><h2>PREMIUM BRANDS<br/><em>FOR LESS.</em></h2><a href="#top">RETURN TO TOP ↑</a></div></section>
+      <section className="closing-film"><div className="closing-image"></div><div className="closing-shade"></div><div className="closing-content"><p>SAHJONY</p><h2>PREMIUM BRANDS<br/><em>FOR LESS.</em></h2><Link href="/discover">DISCOVER THE FULL EDIT ↗</Link></div></section>
 
-      <footer><div><a className="wordmark footer-mark" href="#top">SAHJONY</a><p>PREMIUM BRANDS FOR LESS</p></div><div className="footer-links"><a href="#shop">SHOP</a><a href="#world">ABOUT</a><a href="#client">CLIENT SERVICES</a></div><div className="legal">© 2026 SAHJONY. ALL RIGHTS RESERVED.<br/>Independent multi-brand retailer.</div></footer>
+      <footer><div><a className="wordmark footer-mark" href="#top">SAHJONY</a><p>PREMIUM BRANDS FOR LESS</p></div><div className="footer-links"><Link href="/discover">SHOP</Link><Link href="/saved">SAVED</Link><a href="#client">CLIENT SERVICES</a></div><div className="legal">© 2026 SAHJONY. ALL RIGHTS RESERVED.<br/>Independent multi-brand retailer.</div></footer>
     </main>
   );
 }
