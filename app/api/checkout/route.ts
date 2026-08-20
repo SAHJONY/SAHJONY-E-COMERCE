@@ -14,6 +14,9 @@ type CheckoutRequest = {
 
 export async function POST(request: Request) {
   try {
+    if (process.env.COMMERCE_LIVE_SALES_ENABLED !== 'true') {
+      return NextResponse.json({ error: 'live_sales_not_enabled' }, { status: 503 });
+    }
     if (!process.env.DATABASE_URL) {
       return NextResponse.json({ error: 'database_not_ready' }, { status: 503 });
     }
