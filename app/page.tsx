@@ -16,7 +16,7 @@ export default function Home() {
       <nav className="nav">
         <button className="nav-icon" aria-label="Open menu">☰</button>
         <a className="wordmark" href="#top" aria-label="SAHJONY home">SAHJONY</a>
-        <div className="nav-actions"><a href="#shop">SHOP</a><a href="#world">THE WORLD OF SAHJONY</a><a href="#client">CLIENT SERVICES</a><Link href="/discover">SEARCH</Link><Link href="/saved">SAVED</Link><Link href="/bag">BAG</Link></div>
+        <div className="nav-actions"><a href="#shop">SHOP</a><a href="#world">THE WORLD OF SAHJONY</a><Link href="/client-services">CLIENT SERVICES</Link><Link href="/discover">SEARCH</Link><Link href="/saved">SAVED</Link><Link href="/bag">BAG</Link></div>
       </nav>
 
       <section className="cinema-hero" id="top">
@@ -38,13 +38,13 @@ export default function Home() {
 
       <section className="material-section"><div className="material-copy"><p className="micro">DESIGN WITHOUT COMPROMISE</p><h2>Every pixel should feel<br/>as considered as the product.</h2><p>Obsidian black. Mineral white. Champagne metal. Deep cinematic photography. Precise typography. Subtle motion. SAHJONY is engineered to feel expensive before a customer ever sees a price.</p></div><div className="material-grid"><div className="swatch obsidian"><span>OBSIDIAN</span><b>#050505</b></div><div className="swatch pearl"><span>PEARL</span><b>#F5F2EA</b></div><div className="swatch champagne"><span>CHAMPAGNE</span><b>#C4A775</b></div></div></section>
 
-      <section className="cinematic-panel fashion-panel"><div className="panel-image"></div><div className="panel-shade"></div><div className="panel-copy panel-right"><p className="micro light">PRIVATE SELECTION</p><h2>Quietly<br/><em>extraordinary.</em></h2><p>Distinctive pieces, limited opportunities and premium discoveries for clients who expect more from retail.</p><a className="button-glass" href="#client">CLIENT SERVICES</a></div></section>
+      <section className="cinematic-panel fashion-panel"><div className="panel-image"></div><div className="panel-shade"></div><div className="panel-copy panel-right"><p className="micro light">PRIVATE SELECTION</p><h2>Quietly<br/><em>extraordinary.</em></h2><p>Distinctive pieces, limited opportunities and premium discoveries for clients who expect more from retail.</p><Link className="button-glass" href="/client-services">CLIENT SERVICES</Link></div></section>
 
-      <section className="client-suite" id="client"><div className="client-kicker">SAHJONY PRIVATE CLIENT</div><div className="client-grid"><div><h2>A personal layer<br/>to digital luxury.</h2></div><div><p>For product discovery, gifting, special requests and premium assistance, SAHJONY Client Services delivers a more considered experience.</p><a className="button-dark" href="mailto:clientservices@sahjony.com">CONTACT CLIENT SERVICES</a></div></div></section>
+      <section className="client-suite" id="client"><div className="client-kicker">SAHJONY PRIVATE CLIENT</div><div className="client-grid"><div><h2>A personal layer<br/>to digital luxury.</h2></div><div><p>For product discovery, gifting, special requests and premium assistance, SAHJONY Client Services delivers a more considered experience.</p><Link className="button-dark" href="/client-services">ENTER CLIENT SERVICES</Link></div></div></section>
 
       <section className="closing-film"><div className="closing-image"></div><div className="closing-shade"></div><div className="closing-content"><p>SAHJONY</p><h2>PREMIUM BRANDS<br/><em>FOR LESS.</em></h2><Link href="/discover">DISCOVER THE FULL EDIT ↗</Link></div></section>
 
-      <footer><div><a className="wordmark footer-mark" href="#top">SAHJONY</a><p>PREMIUM BRANDS FOR LESS</p></div><div className="footer-links"><Link href="/discover">SHOP</Link><Link href="/saved">SAVED</Link><a href="#client">CLIENT SERVICES</a></div><div className="legal">© 2026 SAHJONY. ALL RIGHTS RESERVED.<br/>Independent multi-brand retailer.</div></footer>
+      <footer><div><a className="wordmark footer-mark" href="#top">SAHJONY</a><p>PREMIUM BRANDS FOR LESS</p></div><div className="footer-links"><Link href="/discover">SHOP</Link><Link href="/client-services">CLIENT SERVICES</Link><Link href="/authenticity">AUTHENTICITY</Link><Link href="/shipping-returns">SHIPPING & RETURNS</Link><Link href="/privacy">PRIVACY</Link><Link href="/terms">TERMS</Link></div><div className="legal">© 2026 SAHJONY. ALL RIGHTS RESERVED.<br/>Independent multi-brand retailer.</div></footer>
     </main>
   );
 }
