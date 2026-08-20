@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { timingSafeEqual } from 'crypto';
 import { getSql } from '@/lib/db';
 import { ensureCommerceSchema } from '@/lib/commerce-schema';
+import { writeOwnerAudit } from '@/lib/owner-audit';
 
 const allowedStatuses = new Set(['unfulfilled','processing','shipped','delivered','canceled']);
 
@@ -64,5 +65,19 @@ export async function PATCH(request: Request) {
   if (!Array.isArray(updated) || updated.length === 0) {
     return NextResponse.json({ error: 'order_not_found' }, { status: 404 });
   }
-  return NextResponse.json({ order: updated[0] });
+
+  const order = updated[0] as { order_number?: string; fulfillment_status?: string; tracking_carrier?: string | null; tracking_number?: string | null };
+  await writeOwnerAudit({
+    action: 'order.fulfillment_update',
+    entityType: 'order',
+    entityId: orderId,
+    metadata: {
+      orderNumber: order.order_number,
+      fulfillmentStatus: order.fulfillment_status,
+      trackingCarrier: order.tracking_carrier,
+      trackingNumber: order.tracking_number,
+    },
+  });
+
+  return NextResponse.json({ order });
 }
