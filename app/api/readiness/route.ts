@@ -2,6 +2,9 @@ import { NextResponse } from 'next/server';
 import { getSql } from '@/lib/db';
 import { ensureCommerceSchema } from '@/lib/commerce-schema';
 
+type OkRow = { ok?: number };
+type CountRow = { count?: number };
+
 export async function GET() {
   const checks = {
     databaseConfigured: Boolean(process.env.DATABASE_URL),
@@ -17,14 +20,14 @@ export async function GET() {
     try {
       await ensureCommerceSchema();
       const sql = getSql();
-      const result = await sql`select 1 as ok`;
+      const result = (await sql`select 1 as ok`) as unknown as OkRow[];
       checks.databaseConnected = result[0]?.ok === 1;
-      const tables = await sql`
+      const tables = (await sql`
         select count(*)::int as count
         from information_schema.tables
         where table_schema = 'public'
           and table_name in ('customers','orders','order_items','checkout_sessions')
-      `;
+      `) as unknown as CountRow[];
       checks.ledgerReady = Number(tables[0]?.count ?? 0) === 4;
     } catch {
       checks.databaseConnected = false;
