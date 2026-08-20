@@ -1,0 +1,164 @@
+'use client';
+
+import { FormEvent, useEffect, useMemo, useState } from 'react';
+import './owner.css';
+
+type Readiness = { ready?: boolean; verifiedSellableProducts?: number; checks?: Record<string, boolean> };
+type Row = Record<string, any>;
+type CommandCenter = {
+  generatedAt?: string;
+  executive?: Row;
+  inventory?: Row;
+  fulfillment?: Row;
+  procurement?: Row;
+  analytics?: Row;
+  finance?: Row;
+  recentOrders?: Row[];
+  topProducts?: Row[];
+  tasks?: Row[];
+  audit?: Row[];
+};
+
+type Product = { slug?: string; sku?: string; brand?: string; name?: string; inventory_quantity?: number; is_active?: boolean; source_verified?: boolean; price_cents?: number };
+
+const tabs = ['overview','orders','catalog','inventory','procurement','customers','finance','analytics','audit','system'] as const;
+type Tab = typeof tabs[number];
+const money = (cents?: number) => `$${(Number(cents || 0) / 100).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}`;
+const pct = (value?: number) => `${(Number(value || 0) * 100).toFixed(2)}%`;
+
+export default function OwnerPage() {
+  const [token,setToken] = useState('');
+  const [readiness,setReadiness] = useState<Readiness | null>(null);
+  const [command,setCommand] = useState<CommandCenter | null>(null);
+  const [products,setProducts] = useState<Product[]>([]);
+  const [authorized,setAuthorized] = useState(false);
+  const [loading,setLoading] = useState(false);
+  const [error,setError] = useState('');
+  const [tab,setTab] = useState<Tab>('overview');
+  const [taskTitle,setTaskTitle] = useState('');
+  const [taskPriority,setTaskPriority] = useState('medium');
+  const [busyAction,setBusyAction] = useState('');
+
+  useEffect(() => {
+    const saved = sessionStorage.getItem('sahjony-owner-token') || '';
+    if (saved) { setToken(saved); void loadOwnerData(saved); }
+    else void loadReadiness();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[]);
+
+  async function loadReadiness(){
+    try { const r = await fetch('/api/readiness',{cache:'no-store'}); setReadiness(await r.json()); }
+    catch { setReadiness(null); }
+  }
+
+  async function loadOwnerData(ownerToken:string){
+    setLoading(true); setError(''); await loadReadiness();
+    try {
+      const headers = {'x-owner-token':ownerToken};
+      const [ccRes,catRes] = await Promise.all([
+        fetch('/api/owner/command-center',{headers,cache:'no-store'}),
+        fetch('/api/owner/catalog',{headers,cache:'no-store'}),
+      ]);
+      if (ccRes.status===401 || catRes.status===401) {
+        sessionStorage.removeItem('sahjony-owner-token'); setAuthorized(false); setCommand(null); setProducts([]); setError('Owner credentials were not accepted.'); return;
+      }
+      if (!ccRes.ok || !catRes.ok) { setAuthorized(false); setError('Owner operations are not fully configured in this environment.'); return; }
+      const cc = await ccRes.json(); const catalog = await catRes.json();
+      setCommand(cc); setProducts(Array.isArray(catalog.products)?catalog.products:[]); setAuthorized(true); sessionStorage.setItem('sahjony-owner-token',ownerToken);
+    } catch { setAuthorized(false); setError('Unable to reach owner operations.'); }
+    finally { setLoading(false); }
+  }
+
+  function submit(event:FormEvent){ event.preventDefault(); if(token.trim()) void loadOwnerData(token.trim()); }
+  function signOut(){ sessionStorage.removeItem('sahjony-owner-token'); setToken(''); setCommand(null); setProducts([]); setAuthorized(false); setError(''); }
+
+  async function createTask(event:FormEvent){
+    event.preventDefault(); if(!taskTitle.trim()) return; setBusyAction('task');
+    try {
+      const r = await fetch('/api/owner/tasks',{method:'POST',headers:{'content-type':'application/json','x-owner-token':token},body:JSON.stringify({title:taskTitle.trim(),priority:taskPriority})});
+      if(!r.ok) throw new Error('task'); setTaskTitle(''); await loadOwnerData(token);
+    } catch { setError('Could not create owner task.'); } finally { setBusyAction(''); }
+  }
+
+  async function updateTask(id:string,status:string){
+    setBusyAction(id);
+    try {
+      const r = await fetch('/api/owner/tasks',{method:'PATCH',headers:{'content-type':'application/json','x-owner-token':token},body:JSON.stringify({id,status})});
+      if(!r.ok) throw new Error('task'); await loadOwnerData(token);
+    } catch { setError('Could not update owner task.'); } finally { setBusyAction(''); }
+  }
+
+  async function reconcileInventory(){
+    setBusyAction('reconcile');
+    try {
+      const r = await fetch('/api/owner/inventory-reconciliation',{method:'POST',headers:{'x-owner-token':token}});
+      if(!r.ok) throw new Error('reconcile'); await loadOwnerData(token);
+    } catch { setError('Inventory reconciliation could not complete.'); } finally { setBusyAction(''); }
+  }
+
+  const exec = command?.executive || {}; const inv = command?.inventory || {}; const ful = command?.fulfillment || {}; const pro = command?.procurement || {}; const ana = command?.analytics || {}; const fin = command?.finance || {};
+  const activeTasks = command?.tasks || [];
+  const launchPassed = useMemo(()=>Object.values(readiness?.checks||{}).filter(Boolean).length,[readiness]);
+  const launchTotal = Object.keys(readiness?.checks||{}).length;
+
+  if(!authorized){
+    return <main className="owner-shell"><div className="owner-login"><div className="owner-eyebrow">SAHJONY / PRIVATE COMMERCE OS</div><h1>Owner access.</h1><p>One private operating system for the entire commerce business. Your token stays in this browser session and is sent only to owner-only APIs.</p><form onSubmit={submit}><input className="owner-input" type="password" value={token} onChange={e=>setToken(e.target.value)} placeholder="OWNER_OPERATIONS_TOKEN" autoComplete="off"/><button className="owner-primary" disabled={loading}>{loading?'CONNECTING…':'ENTER OWNER OS'}</button></form>{error?<div className="owner-error">{error}</div>:null}<p className="owner-note">Platform: {readiness?.ready?'READY':'GATED'} · Sellable products: {readiness?.verifiedSellableProducts??0}</p></div></main>;
+  }
+
+  return <main className="owner-shell">
+    <header className="owner-top"><div className="owner-brand"><span className="owner-mark">SAHJONY</span><span className="owner-kicker">Commerce Operating System</span></div><div className="owner-top-actions"><button className="owner-ghost" onClick={()=>void loadOwnerData(token)}>Refresh</button><button className="owner-ghost" onClick={signOut}>End Session</button><a className="owner-link" href="/">Storefront ↗</a></div></header>
+
+    <section className="owner-heading"><div><div className="owner-eyebrow">OWNER COMMAND CENTER / LIVE BUSINESS CONTROL</div><h1>Run the entire store.</h1></div><p>Revenue, customers, inventory, procurement, fulfillment, analytics, approvals and system health—controlled from one private operating layer.</p></section>
+
+    <nav className="owner-tabs">{tabs.map(item=><button key={item} className={`owner-tab ${tab===item?'active':''}`} onClick={()=>setTab(item)}>{item}</button>)}</nav>
+    {error?<div className="owner-error">{error}</div>:null}
+    {loading?<div className="owner-loading">REFRESHING OPERATIONS…</div>:null}
+
+    <section className={`owner-module ${tab==='overview'?'active':''}`}>
+      <div className="owner-grid">
+        <Metric label="Revenue today" value={money(exec.revenueTodayCents)} sub={`7d ${money(exec.revenue7dCents)}`}/>
+        <Metric label="Revenue 30d" value={money(exec.revenue30dCents)} sub={`${exec.paidOrders30d||0} paid orders`}/>
+        <Metric label="Average order" value={money(exec.averageOrderValueCents)} sub={`${exec.openOrders||0} open orders`}/>
+        <Metric label="Conversion" value={pct(exec.conversionRate)} sub={`${ana.sessions30d||0} sessions / 30d`}/>
+        <Metric label="Customers" value={String(exec.customers||0)} sub={`${exec.repeatCustomers||0} repeat customers`}/>
+        <Metric label="Sellable SKUs" value={String(inv.sellableProducts||0)} sub={`${inv.lowStockProducts||0} low stock`}/>
+        <Metric label="Inventory retail" value={money(inv.retailValueCents)} sub={`cost basis ${money(inv.costValueCents)}`}/>
+        <Metric label="Procurement" value={money(pro.committedCents)} sub={`${pro.openPurchaseOrders||0} open POs`}/>
+      </div>
+      <div className="owner-grid">
+        <Panel title="Owner Action Queue" meta={`${activeTasks.length} OPEN`} span="6"><TaskList tasks={activeTasks} busyAction={busyAction} updateTask={updateTask}/><form className="owner-task-form" onSubmit={createTask}><input className="owner-input" value={taskTitle} onChange={e=>setTaskTitle(e.target.value)} placeholder="Add owner action…"/><select className="owner-select" value={taskPriority} onChange={e=>setTaskPriority(e.target.value)}><option>critical</option><option>high</option><option>medium</option><option>low</option></select><button className="owner-primary" disabled={busyAction==='task'}>ADD</button></form></Panel>
+        <Panel title="Fulfillment Pulse" meta="CURRENT" span="3"><StatRows rows={[['Unfulfilled',ful.unfulfilled],['Processing',ful.processing],['Shipped',ful.shipped],['Delivered 30d',ful.delivered30d],['Canceled 30d',ful.canceled30d]]}/></Panel>
+        <Panel title="Launch Readiness" meta={`${launchPassed}/${launchTotal}`} span="3"><ReadinessGrid readiness={readiness}/></Panel>
+        <Panel title="Recent Orders" meta="LATEST 12" span="6"><OrderList orders={command?.recentOrders||[]}/></Panel>
+        <Panel title="Top Products" meta="30 DAYS" span="6"><div className="owner-list">{(command?.topProducts||[]).map((p,i)=><div className="owner-row" key={p.product_slug||i}><div><strong>{p.product_name||p.product_slug}</strong><small>{p.units||0} units</small></div><div>{money(p.revenue_cents)}</div></div>)}{!(command?.topProducts||[]).length?<div className="owner-empty">No paid-product performance yet.</div>:null}</div></Panel>
+      </div>
+    </section>
+
+    <section className={`owner-module ${tab==='orders'?'active':''}`}><div className="owner-grid"><Metric label="Open orders" value={String(exec.openOrders||0)}/><Metric label="Paid 30d" value={String(exec.paidOrders30d||0)}/><Metric label="AOV" value={money(exec.averageOrderValueCents)}/><Metric label="Delivered 30d" value={String(ful.delivered30d||0)}/><Panel title="Order Operations" meta="PAYMENT → FULFILLMENT" span="12"><OrderList orders={command?.recentOrders||[]}/></Panel></div></section>
+
+    <section className={`owner-module ${tab==='catalog'?'active':''}`}><div className="owner-grid"><Metric label="Catalog records" value={String(inv.totalProducts||products.length)}/><Metric label="Active" value={String(inv.activeProducts||0)}/><Metric label="Sellable" value={String(inv.sellableProducts||0)}/><Metric label="Low stock" value={String(inv.lowStockProducts||0)}/><Panel title="Catalog Control" meta="NEON SOURCE OF TRUTH" span="12"><ProductList products={products}/></Panel></div></section>
+
+    <section className={`owner-module ${tab==='inventory'?'active':''}`}><div className="owner-grid"><Metric label="Retail inventory value" value={money(inv.retailValueCents)}/><Metric label="Cost basis" value={money(inv.costValueCents)}/><Metric label="Sellable products" value={String(inv.sellableProducts||0)}/><Metric label="Low stock" value={String(inv.lowStockProducts||0)}/><Panel title="Inventory Control" meta="RECONCILIATION" span="12"><p className="owner-note">Reservations protect stock during checkout. Reconciliation releases expired reservations and keeps inventory aligned with sellable units.</p><div className="owner-actions"><button className="owner-primary" onClick={()=>void reconcileInventory()} disabled={busyAction==='reconcile'}>{busyAction==='reconcile'?'RECONCILING…':'RUN INVENTORY RECONCILIATION'}</button></div><ProductList products={products}/></Panel></div></section>
+
+    <section className={`owner-module ${tab==='procurement'?'active':''}`}><div className="owner-grid"><Metric label="Open purchase orders" value={String(pro.openPurchaseOrders||0)}/><Metric label="Committed capital" value={money(pro.committedCents)}/><Metric label="Overdue POs" value={String(pro.overduePurchaseOrders||0)}/><Metric label="Supplier accounts" value={String((pro.suppliers||[]).length)}/><Panel title="Supplier Network" meta="PRIVATE" span="12"><div className="owner-list">{(pro.suppliers||[]).map((s:Row)=><div className="owner-row" key={s.id}><div><strong>{s.display_name}</strong><small>{s.code} · {s.source_type||'source type pending'}</small></div><span className="owner-status">{s.status}</span></div>)}{!(pro.suppliers||[]).length?<div className="owner-empty">No supplier accounts recorded yet. Candidate sourcing remains in HOLD until commercial evidence is accepted.</div>:null}</div></Panel></div></section>
+
+    <section className={`owner-module ${tab==='customers'?'active':''}`}><div className="owner-grid"><Metric label="Customers" value={String(exec.customers||0)}/><Metric label="Repeat customers" value={String(exec.repeatCustomers||0)}/><Metric label="Avg customer value" value={money(exec.averageCustomerValueCents)}/><Metric label="Paid orders 30d" value={String(exec.paidOrders30d||0)}/><Panel title="Customer Intelligence" meta="CRM FOUNDATION" span="12"><p className="owner-note">Customer profiles are created from commerce activity and orders. This module will become the Private Client, retention and lifetime-value workspace as transaction history accumulates.</p></Panel></div></section>
+
+    <section className={`owner-module ${tab==='finance'?'active':''}`}><div className="owner-grid"><Metric label="Revenue 30d" value={money(fin.revenue30dCents)}/><Metric label="Inventory cost basis" value={money(fin.inventoryCostBasisCents)}/><Metric label="AOV" value={money(exec.averageOrderValueCents)}/><Metric label="Margin data" value={fin.grossMarginStatus==='cost_data_available'?'AVAILABLE':'AWAITING COSTS'}/><Panel title="Finance Control" meta="UNIT ECONOMICS" span="12"><p className="owner-note">Private product operations store unit cost separately from the public catalog. Once costs are entered, this layer supports gross margin, inventory investment and SKU profitability without exposing sourcing economics publicly.</p></Panel></div></section>
+
+    <section className={`owner-module ${tab==='analytics'?'active':''}`}><div className="owner-grid"><Metric label="Sessions 30d" value={String(ana.sessions30d||0)}/><Metric label="Page views" value={String(ana.pageViews30d||0)}/><Metric label="Product views" value={String(ana.productViews30d||0)}/><Metric label="Conversion" value={pct(ana.conversionRate)}/><Panel title="Commerce Funnel" meta="FIRST-PARTY" span="12"><div className="owner-funnel"><FunnelStep label="Sessions" value={ana.sessions30d}/><FunnelStep label="Page Views" value={ana.pageViews30d}/><FunnelStep label="Product Views" value={ana.productViews30d}/><FunnelStep label="Add to Cart" value={ana.addToCart30d}/><FunnelStep label="Checkout" value={ana.checkoutStarted30d}/></div><p className="owner-note">First-party page telemetry is now captured in Neon. Product/cart/checkout instrumentation can progressively enrich this funnel without relying on third-party analytics for the core owner view.</p></Panel></div></section>
+
+    <section className={`owner-module ${tab==='audit'?'active':''}`}><div className="owner-grid"><Panel title="Owner Audit Trail" meta="LATEST 20" span="12"><div className="owner-list">{(command?.audit||[]).map((a,i)=><div className="owner-row" key={a.id||i}><div><strong>{a.action}</strong><small>{a.entity_type}{a.entity_id?` · ${a.entity_id}`:''}</small></div><small>{a.created_at?new Date(a.created_at).toLocaleString():''}</small></div>)}{!(command?.audit||[]).length?<div className="owner-empty">No owner mutations recorded yet.</div>:null}</div></Panel></div></section>
+
+    <section className={`owner-module ${tab==='system'?'active':''}`}><div className="owner-grid"><Metric label="Platform" value={readiness?.ready?'READY':'GATED'}/><Metric label="Readiness gates" value={`${launchPassed}/${launchTotal}`}/><Metric label="Sellable inventory" value={String(readiness?.verifiedSellableProducts||0)}/><Metric label="Data generated" value={command?.generatedAt?new Date(command.generatedAt).toLocaleTimeString():'—'}/><Panel title="System Health & Launch Gates" meta="FAIL-CLOSED" span="12"><ReadinessGrid readiness={readiness}/></Panel></div></section>
+  </main>;
+}
+
+function Metric({label,value,sub}:{label:string,value:string,sub?:string}){return <div className="owner-card span-3"><div className="metric-label">{label}</div><div className="metric-value">{value}</div>{sub?<div className="metric-sub">{sub}</div>:null}</div>}
+function Panel({title,meta,span,children}:{title:string,meta:string,span:string,children:React.ReactNode}){return <div className={`owner-card span-${span}`}><div className="owner-section-title"><h2>{title}</h2><span>{meta}</span></div>{children}</div>}
+function StatRows({rows}:{rows:Array<[string,any]>}){return <div className="owner-list">{rows.map(([label,value])=><div className="owner-row" key={label}><strong>{label}</strong><span>{String(value||0)}</span></div>)}</div>}
+function FunnelStep({label,value}:{label:string,value:any}){return <div className="owner-funnel-step"><b>{String(value||0)}</b><span>{label}</span></div>}
+function ReadinessGrid({readiness}:{readiness:Readiness|null}){return <div className="owner-readiness">{Object.entries(readiness?.checks||{}).map(([key,value])=><div key={key}><span>{key}</span><b className={value?'pass':'gated'}>{value?'PASS':'GATED'}</b></div>)}</div>}
+function OrderList({orders}:{orders:Row[]}){return <div className="owner-list">{orders.map((o,i)=><div className="owner-row" key={o.id||i}><div><strong>{o.order_number||'ORDER'} · {o.email||'customer'}</strong><small>{o.payment_status||'unpaid'} · {o.fulfillment_status||'unfulfilled'}{o.tracking_number?` · ${o.tracking_carrier||''} ${o.tracking_number}`:''}</small></div><div>{money(o.total_cents)}</div></div>)}{!orders.length?<div className="owner-empty">No orders yet.</div>:null}</div>}
+function ProductList({products}:{products:Product[]}){return <div className="owner-list">{products.slice(0,50).map((p,i)=><div className="owner-row" key={p.slug||p.sku||i}><div><strong>{p.brand} {p.name}</strong><small>{p.sku||'NO SKU'} · stock {Number(p.inventory_quantity||0)} · {money(p.price_cents)}</small></div><span className="owner-status">{p.is_active&&p.source_verified?'LIVE':'HOLD'}</span></div>)}{!products.length?<div className="owner-empty">No internal catalog records yet.</div>:null}</div>}
+function TaskList({tasks,busyAction,updateTask}:{tasks:Row[],busyAction:string,updateTask:(id:string,status:string)=>Promise<void>}){return <div className="owner-list">{tasks.slice(0,10).map((t,i)=><div className="owner-row" key={t.id||i}><div><strong>{t.title}</strong><small>{t.category} · {t.priority} · {t.status}</small></div><button className="owner-ghost" disabled={busyAction===t.id} onClick={()=>void updateTask(String(t.id),'done')}>DONE</button></div>)}{!tasks.length?<div className="owner-empty">No owner actions waiting.</div>:null}</div>}
