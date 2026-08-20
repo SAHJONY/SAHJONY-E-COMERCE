@@ -1,0 +1,43 @@
+name: Deploy SAHJONY E-Commerce to Vercel
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      VERCEL_ORG_ID: team_Me3fB0D0J6He10CgJlJ44Xaq
+      VERCEL_PROJECT_ID: prj_pGXwdZCw2Wlm3BCKIea6mhk4deRS
+    steps:
+      - name: Checkout canonical main
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Verify application build
+        run: npm run build
+
+      - name: Install Vercel CLI
+        run: npm install --global vercel@latest
+
+      - name: Pull production settings
+        run: vercel pull --yes --environment=production --token="${{ secrets.VERCEL_TOKEN }}"
+
+      - name: Build with canonical Vercel project settings
+        run: vercel build --prod --token="${{ secrets.VERCEL_TOKEN }}"
+
+      - name: Deploy canonical production
+        run: vercel deploy --prebuilt --prod --token="${{ secrets.VERCEL_TOKEN }}"
