@@ -45,9 +45,12 @@ async function createSchema() {
     total_cents bigint not null default 0,
     shipping_address jsonb,
     billing_address jsonb,
+    stripe_session_id text,
     created_at timestamptz not null default now(),
     updated_at timestamptz not null default now()
   )`;
+
+  await sql`alter table public.orders add column if not exists stripe_session_id text`;
 
   await sql`create table if not exists public.order_items (
     id uuid primary key default gen_random_uuid(),
@@ -65,12 +68,17 @@ async function createSchema() {
     session_key text not null unique,
     customer_email text,
     cart_snapshot jsonb not null,
+    stripe_session_id text,
     status text not null default 'open',
     expires_at timestamptz,
     created_at timestamptz not null default now(),
     updated_at timestamptz not null default now()
   )`;
 
+  await sql`alter table public.checkout_sessions add column if not exists stripe_session_id text`;
+
+  await sql`create unique index if not exists orders_stripe_session_id_uidx on public.orders(stripe_session_id) where stripe_session_id is not null`;
+  await sql`create unique index if not exists checkout_sessions_stripe_session_id_uidx on public.checkout_sessions(stripe_session_id) where stripe_session_id is not null`;
   await sql`create index if not exists orders_customer_id_idx on public.orders(customer_id)`;
   await sql`create index if not exists orders_created_at_idx on public.orders(created_at desc)`;
   await sql`create index if not exists order_items_order_id_idx on public.order_items(order_id)`;
