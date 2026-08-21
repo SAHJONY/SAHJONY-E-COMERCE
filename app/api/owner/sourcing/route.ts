@@ -74,6 +74,29 @@ export async function PATCH(request: Request) {
   if (!authorized(request)) return NextResponse.json({ error:'unauthorized' },{ status:401 });
   if (!process.env.DATABASE_URL) return NextResponse.json({ error:'database_not_ready' },{ status:503 });
   const body = await request.json();
+  const supplierId = String(body?.supplierId ?? '');
+  if (supplierId && body?.action === 'request_supplier_evidence') {
+    await ensureOperationsSchema();
+    const sql = getSql();
+    const suppliers = (await sql`select id,code,display_name,source_type,status
+      from public.supplier_accounts where id=${supplierId}::uuid`) as unknown as Array<Record<string,unknown>>;
+    if (!suppliers.length) return NextResponse.json({ error:'supplier_not_found' },{ status:404 });
+    const supplier = suppliers[0];
+    const intelligenceOnly = supplier.source_type === 'market_intelligence_affiliate_only';
+    const supplierStatus = intelligenceOnly ? 'terms_review_requested' : 'evidence_requested';
+    await sql`update public.supplier_accounts set status=${supplierStatus},updated_at=now()
+      where id=${supplierId}::uuid`;
+    const candidates = (await sql`update public.sourcing_candidates
+      set status='evidence_requested',updated_at=now()
+      where supplier_account_id=${supplierId}::uuid and status='hold'
+      returning id`) as unknown as Array<Record<string,unknown>>;
+    await writeOwnerAudit({
+      action:intelligenceOnly?'sourcing.supplier_terms_review_requested':'sourcing.supplier_evidence_requested',
+      entityType:'supplier_account',entityId:supplierId,
+      metadata:{ code:supplier.code,candidatesUpdated:candidates.length,status:supplierStatus },
+    });
+    return NextResponse.json({ supplier:{ ...supplier,status:supplierStatus },candidatesUpdated:candidates.length });
+  }
   const id = String(body?.id ?? ''); const status = String(body?.status ?? '');
   if (!id || !statuses.has(status)) return NextResponse.json({ error:'invalid_candidate_update' },{ status:400 });
   await ensureOperationsSchema();
