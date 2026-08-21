@@ -6,11 +6,14 @@ import { ensureOperationsSchema } from '@/lib/operations-schema';
 import { writeOwnerAudit } from '@/lib/owner-audit';
 
 const statuses = new Set(['hold','evidence_requested','evidence_received','under_review','approved','rejected']);
-const supplierCodes: Record<string,string> = {
-  'Perfumes Plus Wholesale': 'PERFUMES_PLUS',
-  'Ready Distribution': 'READY_DISTRIBUTION',
-  'Shinola Wholesale': 'SHINOLA_DIRECT',
-  'Stratum Co.': 'STRATUM_CO',
+const supplierPrograms: Record<string,{ code:string; sourceType:string }> = {
+  'Perfumes Plus Wholesale': { code:'PERFUMES_PLUS', sourceType:'wholesale_program' },
+  'Ready Distribution': { code:'READY_DISTRIBUTION', sourceType:'authorized_distribution' },
+  'Shinola Wholesale': { code:'SHINOLA_DIRECT', sourceType:'brand_direct' },
+  'Stratum Co.': { code:'STRATUM_CO', sourceType:'authorized_closeout' },
+  'Faire Wholesale': { code:'FAIRE_WHOLESALE', sourceType:'wholesale_marketplace' },
+  'B-Stock Contemporary Fashion': { code:'BSTOCK_CONTEMPORARY', sourceType:'liquidation_marketplace' },
+  'ShopSimon': { code:'SHOPSIMON', sourceType:'market_intelligence_affiliate_only' },
 };
 
 function authorized(request: Request) {
@@ -29,7 +32,8 @@ export async function GET(request: Request) {
   const candidates = (await sql`select sc.id, sc.candidate_code, sc.priority, sc.category, sc.brand,
     sc.proposed_name, sc.manufacturer_sku, sc.status, sc.evidence_status, sc.target_price_cents,
     sc.proposed_inventory, sc.verification_method, sc.image_rights_status, sc.fulfillment_status,
-    sa.code as supplier_code, sa.display_name as supplier_name, sa.status as supplier_status, sc.updated_at
+    sa.code as supplier_code, sa.display_name as supplier_name, sa.status as supplier_status,
+    sa.source_type as supplier_source_type, sc.updated_at
     from public.sourcing_candidates sc left join public.supplier_accounts sa on sa.id = sc.supplier_account_id
     order by sc.priority asc, sc.candidate_code asc`) as unknown as Array<Record<string,unknown>>;
   return NextResponse.json({ candidates, count:candidates.length });
@@ -42,13 +46,15 @@ export async function POST(request: Request) {
   if (body?.action !== 'seed_intake') return NextResponse.json({ error:'unsupported_action' },{ status:400 });
   await ensureOperationsSchema();
   const sql = getSql();
-  for (const [displayName,code] of Object.entries(supplierCodes)) {
+  for (const [displayName,program] of Object.entries(supplierPrograms)) {
     await sql`insert into public.supplier_accounts (code,display_name,status,source_type,updated_at)
-      values (${code},${displayName},'prospect','wholesale_program',now())
-      on conflict (code) do update set display_name=excluded.display_name, updated_at=now()`;
+      values (${program.code},${displayName},'prospect',${program.sourceType},now())
+      on conflict (code) do update set display_name=excluded.display_name,
+        source_type=excluded.source_type, updated_at=now()`;
   }
   for (const candidate of intake.candidates) {
-    const supplierCode = supplierCodes[candidate.sourceProgram];
+    const supplierCode = supplierPrograms[candidate.sourceProgram]?.code;
+    if (!supplierCode) throw new Error(`Unknown sourcing program: ${candidate.sourceProgram}`);
     await sql`insert into public.sourcing_candidates (
       candidate_code,supplier_account_id,priority,category,brand,proposed_name,manufacturer_sku,
       status,evidence_status,target_price_cents,proposed_inventory,verification_method,updated_at
