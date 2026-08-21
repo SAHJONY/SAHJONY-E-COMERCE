@@ -12,7 +12,7 @@ function readBag(): BagItem[] {
 
 export default function BagView() {
   const [items, setItems] = useState<BagItem[]>([]);
-  useEffect(() => { setItems(readBag()); }, []);
+  useEffect(() => { queueMicrotask(() => setItems(readBag())); }, []);
   const subtotal = useMemo(() => items.reduce((sum, item) => sum + item.price * item.quantity, 0), [items]);
 
   function persist(next: BagItem[]) {

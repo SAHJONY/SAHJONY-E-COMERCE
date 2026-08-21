@@ -1,6 +1,7 @@
 'use client';
 
 import { FormEvent, useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
 import './owner.css';
 
 type Readiness = { ready?: boolean; verifiedSellableProducts?: number; checks?: Record<string, boolean> };
@@ -41,8 +42,10 @@ export default function OwnerPage() {
 
   useEffect(() => {
     const saved = sessionStorage.getItem('sahjony-owner-token') || '';
-    if (saved) { setToken(saved); void loadOwnerData(saved); }
-    else void loadReadiness();
+    queueMicrotask(() => {
+      if (saved) { setToken(saved); void loadOwnerData(saved); }
+      else void loadReadiness();
+    });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   },[]);
 
@@ -106,7 +109,7 @@ export default function OwnerPage() {
   }
 
   return <main className="owner-shell">
-    <header className="owner-top"><div className="owner-brand"><span className="owner-mark">SAHJONY</span><span className="owner-kicker">Commerce Operating System</span></div><div className="owner-top-actions"><button className="owner-ghost" onClick={()=>void loadOwnerData(token)}>Refresh</button><button className="owner-ghost" onClick={signOut}>End Session</button><a className="owner-link" href="/">Storefront ↗</a></div></header>
+    <header className="owner-top"><div className="owner-brand"><span className="owner-mark">SAHJONY</span><span className="owner-kicker">Commerce Operating System</span></div><div className="owner-top-actions"><button className="owner-ghost" onClick={()=>void loadOwnerData(token)}>Refresh</button><button className="owner-ghost" onClick={signOut}>End Session</button><Link className="owner-link" href="/">Storefront ↗</Link></div></header>
 
     <section className="owner-heading"><div><div className="owner-eyebrow">OWNER COMMAND CENTER / LIVE BUSINESS CONTROL</div><h1>Run the entire store.</h1></div><p>Revenue, customers, inventory, procurement, fulfillment, analytics, approvals and system health—controlled from one private operating layer.</p></section>
 

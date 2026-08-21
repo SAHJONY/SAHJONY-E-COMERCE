@@ -8,7 +8,7 @@ const SAVE_KEY = 'sahjony-saved-v1';
 
 export default function SavedPage() {
   const [saved, setSaved] = useState<string[]>([]);
-  useEffect(() => { try { setSaved(JSON.parse(localStorage.getItem(SAVE_KEY) || '[]')); } catch { setSaved([]); } }, []);
+  useEffect(() => { queueMicrotask(() => { try { setSaved(JSON.parse(localStorage.getItem(SAVE_KEY) || '[]')); } catch { setSaved([]); } }); }, []);
   const products = publicProducts.filter((p) => saved.includes(p.slug));
   function remove(slug: string) { const next = saved.filter((item) => item !== slug); setSaved(next); localStorage.setItem(SAVE_KEY, JSON.stringify(next)); }
 

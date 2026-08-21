@@ -12,7 +12,7 @@ export default function CheckoutPage() {
   const [busy,setBusy] = useState(false);
   const [message,setMessage] = useState('');
 
-  useEffect(() => { try { setItems(JSON.parse(localStorage.getItem(BAG_KEY) || '[]')); } catch { setItems([]); } }, []);
+  useEffect(() => { queueMicrotask(() => { try { setItems(JSON.parse(localStorage.getItem(BAG_KEY) || '[]')); } catch { setItems([]); } }); }, []);
   const subtotal = useMemo(() => items.reduce((sum,item) => sum + item.price * item.quantity,0),[items]);
 
   async function beginCheckout() {

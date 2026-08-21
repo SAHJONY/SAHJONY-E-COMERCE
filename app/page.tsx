@@ -1,50 +1,55 @@
+import Image from "next/image";
 import Link from "next/link";
+import SiteFooter from "./components/SiteFooter";
+import SiteHeader from "./components/SiteHeader";
 
 const categories = [
-  { slug: "bags-leather", label: "BAGS & LEATHER", title: "Sculpted essentials", image: "https://images.unsplash.com/photo-1584917865442-de89df76afd3?auto=format&fit=crop&w=1800&q=95" },
-  { slug: "timepieces", label: "TIMEPIECES", title: "Precision, elevated", image: "https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=1800&q=95" },
-  { slug: "footwear", label: "FOOTWEAR", title: "Icons in motion", image: "https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=1800&q=95" },
-  { slug: "beauty-fragrance", label: "BEAUTY & FRAGRANCE", title: "Rare signatures", image: "https://images.unsplash.com/photo-1541643600914-78b084683601?auto=format&fit=crop&w=1800&q=95" },
+  { slug: "bags-leather", label: "BAGS & LEATHER", title: "Sculpted essentials", image: "https://images.unsplash.com/photo-1584917865442-de89df76afd3?auto=format&fit=crop&w=1600&q=90" },
+  { slug: "timepieces", label: "TIMEPIECES", title: "Precision, elevated", image: "https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=1600&q=90" },
+  { slug: "footwear", label: "FOOTWEAR", title: "Icons in motion", image: "https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=1600&q=90" },
+  { slug: "beauty-fragrance", label: "BEAUTY & FRAGRANCE", title: "Rare signatures", image: "https://images.unsplash.com/photo-1541643600914-78b084683601?auto=format&fit=crop&w=1600&q=90" },
 ];
-
-const assurances = ["Premium selection", "Authenticity first", "Secure checkout", "Private client care"];
 
 export default function Home() {
   return (
-    <main className="site-shell">
-      <div className="announcement">SAHJONY · PREMIUM BRANDS FOR LESS · COMPLIMENTARY U.S. DELIVERY ON QUALIFYING ORDERS</div>
-      <nav className="nav">
-        <button className="nav-icon" aria-label="Open menu">☰</button>
-        <a className="wordmark" href="#top" aria-label="SAHJONY home">SAHJONY</a>
-        <div className="nav-actions"><a href="#shop">SHOP</a><a href="#world">THE WORLD OF SAHJONY</a><Link href="/client-services">CLIENT SERVICES</Link><Link href="/discover">SEARCH</Link><Link href="/saved">SAVED</Link><Link href="/bag">BAG</Link></div>
-      </nav>
+    <main className="site-shell" id="main-content">
+      <div className="announcement">COMPLIMENTARY U.S. DELIVERY ON QUALIFYING ORDERS</div>
+      <SiteHeader overlay />
 
       <section className="cinema-hero" id="top">
-        <div className="hero-media"></div><div className="hero-vignette"></div>
-        <div className="hero-content"><p className="micro light">THE NEW STANDARD IN PREMIUM RETAIL</p><h1><span>PREMIUM</span><span>BRANDS</span><em>FOR LESS.</em></h1><p className="hero-sub">The world&apos;s most desirable categories, presented with cinematic clarity and an uncompromising eye for quality.</p><div className="hero-actions"><a className="button-glass" href="#shop">ENTER THE COLLECTION</a><Link className="hero-link" href="/discover">DISCOVER SAHJONY <span>↗</span></Link></div></div>
-        <div className="hero-caption"><span>SAHJONY / 001</span><span>ULTRA PREMIUM COMMERCE</span></div><div className="scroll-mark">SCROLL <span>↓</span></div>
+        <Image className="hero-image" src="https://images.unsplash.com/photo-1529139574466-a303027c1d8b?auto=format&fit=crop&w=2400&q=92" alt="Editorial fashion from the SAHJONY collection" fill priority sizes="100vw" />
+        <div className="hero-vignette" />
+        <div className="hero-content">
+          <p className="micro light">THE SAHJONY EDIT / 2026</p>
+          <h1><span>PREMIUM</span><span>BRANDS</span><em>FOR LESS.</em></h1>
+          <p className="hero-sub">Exceptional pieces across fashion, leather, timepieces and fragrance—selected for presence and priced with intelligence.</p>
+          <div className="hero-actions"><Link className="button-glass" href="/discover">SHOP THE EDIT</Link><Link className="hero-link" href="/authenticity">OUR STANDARD <span>↗</span></Link></div>
+        </div>
+        <div className="hero-caption"><span>SAHJONY / 001</span><span>INDEPENDENT PREMIUM RETAIL</span></div>
+        <a className="scroll-mark" href="#shop">DISCOVER <span>↓</span></a>
       </section>
 
-      <section className="assurance-bar" aria-label="SAHJONY service promises">{assurances.map((item, index) => <div key={item}><span>0{index + 1}</span><b>{item}</b></div>)}</section>
+      <section className="assurance-bar" aria-label="SAHJONY service promises">
+        {["Curated selection", "Authenticity first", "Secure checkout", "Private client care"].map((item, index) => <div key={item}><span>0{index + 1}</span><b>{item}</b></div>)}
+      </section>
 
-      <section className="statement" id="world"><p className="micro">SAHJONY / THE POINT OF VIEW</p><h2>Top-tier products deserve<br/><em>a top-tier experience.</em></h2><p>SAHJONY is designed around restraint, confidence and detail. Every screen is built to feel like a flagship store: immersive when it should be, invisible when it needs to be, and always focused on the product.</p></section>
+      <section className="statement" id="world"><p className="micro">OUR POINT OF VIEW</p><h2>Desirable by design.<br/><em>Remarkable by value.</em></h2><p>We bring together distinctive pieces, considered presentation and attentive service. Every selection has a reason to be here—and every detail is designed to make shopping feel clear, confident and personal.</p></section>
 
       <section className="product-theater" id="shop">
-        <div className="theater-head"><div><p className="micro light">THE SAHJONY EDIT</p><h2>Four worlds.<br/><em>One standard.</em></h2></div><p>Explore premium categories through high-resolution editorial imagery. Authorized brand and SKU photography can replace these visual placeholders as the live catalog is connected.</p></div>
-        <div className="product-runway">{categories.map((item, index) => <article className="runway-card" key={item.label}><div className="runway-image" style={{backgroundImage:`linear-gradient(180deg,rgba(0,0,0,.02),rgba(0,0,0,.52)),url(${item.image})`}}></div><div className="runway-index">0{index + 1}</div><div className="runway-copy"><p>{item.label}</p><h3>{item.title}</h3><Link href={`/collections/${item.slug}`}>EXPLORE <span>↗</span></Link></div></article>)}</div>
+        <div className="theater-head"><div><p className="micro light">SHOP BY WORLD</p><h2>Four perspectives.<br/><em>One point of view.</em></h2></div><Link className="text-link light" href="/discover">VIEW THE FULL EDIT ↗</Link></div>
+        <div className="product-runway">{categories.map((item, index) => <Link className="runway-card" href={`/collections/${item.slug}`} key={item.label}><Image className="runway-image" src={item.image} alt={item.title} fill sizes="(max-width: 600px) 100vw, (max-width: 950px) 50vw, 25vw"/><div className="runway-overlay"/><div className="runway-index">0{index + 1}</div><div className="runway-copy"><p>{item.label}</p><h3>{item.title}</h3><span>EXPLORE ↗</span></div></Link>)}</div>
       </section>
 
-      <section className="cinematic-panel watch-panel"><div className="panel-image"></div><div className="panel-shade"></div><div className="panel-copy"><p className="micro light">OBJECTS OF DESIRE</p><h2>Made to be<br/><em>remembered.</em></h2><p>Timeless form, exceptional materiality and premium product stories presented without distraction.</p><Link className="button-glass" href="/collections/timepieces">DISCOVER TIMEPIECES</Link></div></section>
+      <section className="cinematic-panel watch-panel"><div className="panel-image"/><div className="panel-shade"/><div className="panel-copy"><p className="micro light">THE TIMEPIECE EDIT</p><h2>Made to be<br/><em>remembered.</em></h2><p>Enduring form, precise details and watches chosen to carry meaning well beyond the moment.</p><Link className="button-glass" href="/collections/timepieces">DISCOVER TIMEPIECES</Link></div></section>
 
-      <section className="material-section"><div className="material-copy"><p className="micro">DESIGN WITHOUT COMPROMISE</p><h2>Every pixel should feel<br/>as considered as the product.</h2><p>Obsidian black. Mineral white. Champagne metal. Deep cinematic photography. Precise typography. Subtle motion. SAHJONY is engineered to feel expensive before a customer ever sees a price.</p></div><div className="material-grid"><div className="swatch obsidian"><span>OBSIDIAN</span><b>#050505</b></div><div className="swatch pearl"><span>PEARL</span><b>#F5F2EA</b></div><div className="swatch champagne"><span>CHAMPAGNE</span><b>#C4A775</b></div></div></section>
+      <section className="editorial-value"><p className="micro">THE SAHJONY DIFFERENCE</p><div className="value-grid"><div><span>01</span><h3>Chosen with intention</h3><p>A focused edit across the categories that matter—never an endless aisle.</p></div><div><span>02</span><h3>Value without compromise</h3><p>Premium positioning with a sharper perspective on price.</p></div><div><span>03</span><h3>Service that feels personal</h3><p>Thoughtful support for discovery, gifting and every order.</p></div></div></section>
 
-      <section className="cinematic-panel fashion-panel"><div className="panel-image"></div><div className="panel-shade"></div><div className="panel-copy panel-right"><p className="micro light">PRIVATE SELECTION</p><h2>Quietly<br/><em>extraordinary.</em></h2><p>Distinctive pieces, limited opportunities and premium discoveries for clients who expect more from retail.</p><Link className="button-glass" href="/client-services">CLIENT SERVICES</Link></div></section>
+      <section className="cinematic-panel fashion-panel"><div className="panel-image"/><div className="panel-shade"/><div className="panel-copy panel-right"><p className="micro light">PRIVATE CLIENT</p><h2>Quietly<br/><em>extraordinary.</em></h2><p>Personal product discovery, gifting guidance and special-request support for clients who expect more from retail.</p><Link className="button-glass" href="/client-services">EXPLORE CLIENT SERVICES</Link></div></section>
 
-      <section className="client-suite" id="client"><div className="client-kicker">SAHJONY PRIVATE CLIENT</div><div className="client-grid"><div><h2>A personal layer<br/>to digital luxury.</h2></div><div><p>For product discovery, gifting, special requests and premium assistance, SAHJONY Client Services delivers a more considered experience.</p><Link className="button-dark" href="/client-services">ENTER CLIENT SERVICES</Link></div></div></section>
+      <section className="client-suite"><div className="client-kicker">SAHJONY PRIVATE CLIENT</div><div className="client-grid"><div><h2>Tell us what<br/>you&apos;re looking for.</h2></div><div><p>Share a category, occasion or hard-to-find piece. Our client services team will help make the search more considered.</p><a className="button-dark" href="mailto:clientservices@sahjony.com?subject=Private%20Client%20Request">START A REQUEST</a></div></div></section>
 
-      <section className="closing-film"><div className="closing-image"></div><div className="closing-shade"></div><div className="closing-content"><p>SAHJONY</p><h2>PREMIUM BRANDS<br/><em>FOR LESS.</em></h2><Link href="/discover">DISCOVER THE FULL EDIT ↗</Link></div></section>
-
-      <footer><div><a className="wordmark footer-mark" href="#top">SAHJONY</a><p>PREMIUM BRANDS FOR LESS</p></div><div className="footer-links"><Link href="/discover">SHOP</Link><Link href="/client-services">CLIENT SERVICES</Link><Link href="/authenticity">AUTHENTICITY</Link><Link href="/shipping-returns">SHIPPING & RETURNS</Link><Link href="/privacy">PRIVACY</Link><Link href="/terms">TERMS</Link></div><div className="legal">© 2026 SAHJONY. ALL RIGHTS RESERVED.<br/>Independent multi-brand retailer.</div></footer>
+      <section className="closing-film"><div className="closing-image"/><div className="closing-shade"/><div className="closing-content"><p>SAHJONY</p><h2>YOUR NEXT<br/><em>EXCEPTIONAL FIND.</em></h2><Link href="/discover">DISCOVER THE FULL EDIT ↗</Link></div></section>
+      <SiteFooter />
     </main>
   );
 }
