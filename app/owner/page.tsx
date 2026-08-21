@@ -21,6 +21,7 @@ type CommandCenter = {
 };
 
 type Product = { slug?: string; sku?: string; brand?: string; name?: string; inventory_quantity?: number; is_active?: boolean; source_verified?: boolean; price_cents?: number };
+type Candidate = { id?: string; candidate_code?: string; priority?: number; category?: string; brand?: string; proposed_name?: string; manufacturer_sku?: string; status?: string; evidence_status?: string; supplier_name?: string; supplier_status?: string };
 
 const tabs = ['overview','orders','catalog','inventory','procurement','customers','finance','analytics','audit','system'] as const;
 const tabLabels: Record<Tab,string> = { overview:'Command', orders:'Orders', catalog:'Catalog', inventory:'Inventory', procurement:'Sourcing', customers:'Clients', finance:'Finance', analytics:'Intelligence', audit:'Audit', system:'System' };
@@ -33,6 +34,7 @@ export default function OwnerPage() {
   const [readiness,setReadiness] = useState<Readiness | null>(null);
   const [command,setCommand] = useState<CommandCenter | null>(null);
   const [products,setProducts] = useState<Product[]>([]);
+  const [candidates,setCandidates] = useState<Candidate[]>([]);
   const [authorized,setAuthorized] = useState(false);
   const [loading,setLoading] = useState(false);
   const [error,setError] = useState('');
@@ -59,22 +61,23 @@ export default function OwnerPage() {
     setLoading(true); setError(''); await loadReadiness();
     try {
       const headers = {'x-owner-token':ownerToken};
-      const [ccRes,catRes] = await Promise.all([
+      const [ccRes,catRes,sourceRes] = await Promise.all([
         fetch('/api/owner/command-center',{headers,cache:'no-store'}),
         fetch('/api/owner/catalog',{headers,cache:'no-store'}),
+        fetch('/api/owner/sourcing',{headers,cache:'no-store'}),
       ]);
-      if (ccRes.status===401 || catRes.status===401) {
+      if (ccRes.status===401 || catRes.status===401 || sourceRes.status===401) {
         sessionStorage.removeItem('sahjony-owner-token'); setAuthorized(false); setCommand(null); setProducts([]); setError('Owner credentials were not accepted.'); return;
       }
-      if (!ccRes.ok || !catRes.ok) { setAuthorized(false); setError('Owner operations are not fully configured in this environment.'); return; }
-      const cc = await ccRes.json(); const catalog = await catRes.json();
-      setCommand(cc); setProducts(Array.isArray(catalog.products)?catalog.products:[]); setAuthorized(true); sessionStorage.setItem('sahjony-owner-token',ownerToken);
+      if (!ccRes.ok || !catRes.ok || !sourceRes.ok) { setAuthorized(false); setError('Owner operations are not fully configured in this environment.'); return; }
+      const [cc,catalog,sourcing] = await Promise.all([ccRes.json(),catRes.json(),sourceRes.json()]);
+      setCommand(cc); setProducts(Array.isArray(catalog.products)?catalog.products:[]); setCandidates(Array.isArray(sourcing.candidates)?sourcing.candidates:[]); setAuthorized(true); sessionStorage.setItem('sahjony-owner-token',ownerToken);
     } catch { setAuthorized(false); setError('Unable to reach owner operations.'); }
     finally { setLoading(false); }
   }
 
   function submit(event:FormEvent){ event.preventDefault(); if(token.trim()) void loadOwnerData(token.trim()); }
-  function signOut(){ sessionStorage.removeItem('sahjony-owner-token'); setToken(''); setCommand(null); setProducts([]); setAuthorized(false); setError(''); }
+  function signOut(){ sessionStorage.removeItem('sahjony-owner-token'); setToken(''); setCommand(null); setProducts([]); setCandidates([]); setAuthorized(false); setError(''); }
 
   async function createTask(event:FormEvent){
     event.preventDefault(); if(!taskTitle.trim()) return; setBusyAction('task');
@@ -98,6 +101,22 @@ export default function OwnerPage() {
       const r = await fetch('/api/owner/inventory-reconciliation',{method:'POST',headers:{'x-owner-token':token}});
       if(!r.ok) throw new Error('reconcile'); await loadOwnerData(token);
     } catch { setError('Inventory reconciliation could not complete.'); } finally { setBusyAction(''); }
+  }
+
+  async function seedSourcing(){
+    setBusyAction('seed-sourcing'); setError('');
+    try {
+      const r=await fetch('/api/owner/sourcing',{method:'POST',headers:{'content-type':'application/json','x-owner-token':token},body:JSON.stringify({action:'seed_intake'})});
+      if(!r.ok) throw new Error('seed'); await loadOwnerData(token);
+    } catch { setError('The sourcing intake could not be initialized.'); } finally { setBusyAction(''); }
+  }
+
+  async function updateCandidate(id:string,status:string){
+    setBusyAction(id); setError('');
+    try {
+      const r=await fetch('/api/owner/sourcing',{method:'PATCH',headers:{'content-type':'application/json','x-owner-token':token},body:JSON.stringify({id,status})});
+      if(!r.ok) throw new Error('candidate'); await loadOwnerData(token);
+    } catch { setError('The candidate status could not be updated.'); } finally { setBusyAction(''); }
   }
 
   const exec = command?.executive || {}; const inv = command?.inventory || {}; const ful = command?.fulfillment || {}; const pro = command?.procurement || {}; const ana = command?.analytics || {}; const fin = command?.finance || {};
@@ -145,7 +164,7 @@ export default function OwnerPage() {
 
     <section className={`owner-module ${tab==='inventory'?'active':''}`}><div className="owner-grid"><Metric label="Retail inventory value" value={money(inv.retailValueCents)}/><Metric label="Cost basis" value={money(inv.costValueCents)}/><Metric label="Sellable products" value={String(inv.sellableProducts||0)}/><Metric label="Low stock" value={String(inv.lowStockProducts||0)}/><Panel title="Inventory Control" meta="RECONCILIATION" span="12"><p className="owner-note">Reservations protect stock during checkout. Reconciliation releases expired reservations and keeps inventory aligned with sellable units.</p><div className="owner-actions"><button className="owner-primary" onClick={()=>void reconcileInventory()} disabled={busyAction==='reconcile'}>{busyAction==='reconcile'?'RECONCILING…':'RUN INVENTORY RECONCILIATION'}</button></div><ProductList products={products}/></Panel></div></section>
 
-    <section className={`owner-module ${tab==='procurement'?'active':''}`}><div className="owner-grid"><Metric label="Open purchase orders" value={String(pro.openPurchaseOrders||0)}/><Metric label="Committed capital" value={money(pro.committedCents)}/><Metric label="Overdue POs" value={String(pro.overduePurchaseOrders||0)}/><Metric label="Supplier accounts" value={String((pro.suppliers||[]).length)}/><Panel title="Supplier Network" meta="PRIVATE" span="12"><div className="owner-list">{(pro.suppliers||[]).map((s:Row)=><div className="owner-row" key={s.id}><div><strong>{s.display_name}</strong><small>{s.code} · {s.source_type||'source type pending'}</small></div><span className="owner-status">{s.status}</span></div>)}{!(pro.suppliers||[]).length?<div className="owner-empty">No supplier accounts recorded yet. Candidate sourcing remains in HOLD until commercial evidence is accepted.</div>:null}</div></Panel></div></section>
+    <section className={`owner-module ${tab==='procurement'?'active':''}`}><div className="owner-grid"><Metric label="Sourcing candidates" value={String(candidates.length)}/><Metric label="Priority one" value={String(candidates.filter(c=>c.priority===1).length)}/><Metric label="Evidence received" value={String(candidates.filter(c=>c.status==='evidence_received').length)}/><Metric label="Supplier programs" value={String((pro.suppliers||[]).length)}/><Panel title="Catalog Sourcing Pipeline" meta="FAIL-CLOSED" span="8"><div className="sourcing-toolbar"><p className="owner-note">Candidates remain private and unsellable until exact SKU, commercial evidence, inventory, image rights, price and fulfillment terms all pass review.</p><button className="owner-primary" onClick={()=>void seedSourcing()} disabled={busyAction==='seed-sourcing'}>{busyAction==='seed-sourcing'?'INITIALIZING…':candidates.length?'SYNC 25-CANDIDATE INTAKE':'INITIALIZE SOURCING'}</button></div><CandidateList candidates={candidates} busyAction={busyAction} updateCandidate={updateCandidate}/></Panel><Panel title="Supplier Network" meta="PRIVATE" span="4"><div className="owner-list">{(pro.suppliers||[]).map((s:Row)=><div className="owner-row" key={s.id}><div><strong>{s.display_name}</strong><small>{s.code} · {s.source_type||'source type pending'}</small></div><span className="owner-status">{s.status}</span></div>)}{!(pro.suppliers||[]).length?<div className="owner-empty">Initialize sourcing to register the approved prospect programs.</div>:null}</div></Panel></div></section>
 
     <section className={`owner-module ${tab==='customers'?'active':''}`}><div className="owner-grid"><Metric label="Customers" value={String(exec.customers||0)}/><Metric label="Repeat customers" value={String(exec.repeatCustomers||0)}/><Metric label="Avg customer value" value={money(exec.averageCustomerValueCents)}/><Metric label="Paid orders 30d" value={String(exec.paidOrders30d||0)}/><Panel title="Customer Intelligence" meta="CRM FOUNDATION" span="12"><p className="owner-note">Customer profiles are created from commerce activity and orders. This module will become the Private Client, retention and lifetime-value workspace as transaction history accumulates.</p></Panel></div></section>
 
@@ -167,3 +186,4 @@ function ReadinessGrid({readiness}:{readiness:Readiness|null}){return <div class
 function OrderList({orders}:{orders:Row[]}){return <div className="owner-list">{orders.map((o,i)=><div className="owner-row" key={o.id||i}><div><strong>{o.order_number||'ORDER'} · {o.email||'customer'}</strong><small>{o.payment_status||'unpaid'} · {o.fulfillment_status||'unfulfilled'}{o.tracking_number?` · ${o.tracking_carrier||''} ${o.tracking_number}`:''}</small></div><div>{money(o.total_cents)}</div></div>)}{!orders.length?<div className="owner-empty">No orders yet.</div>:null}</div>}
 function ProductList({products}:{products:Product[]}){return <div className="owner-list">{products.slice(0,50).map((p,i)=><div className="owner-row" key={p.slug||p.sku||i}><div><strong>{p.brand} {p.name}</strong><small>{p.sku||'NO SKU'} · stock {Number(p.inventory_quantity||0)} · {money(p.price_cents)}</small></div><span className="owner-status">{p.is_active&&p.source_verified?'LIVE':'HOLD'}</span></div>)}{!products.length?<div className="owner-empty">No internal catalog records yet.</div>:null}</div>}
 function TaskList({tasks,busyAction,updateTask}:{tasks:Row[],busyAction:string,updateTask:(id:string,status:string)=>Promise<void>}){return <div className="owner-list">{tasks.slice(0,10).map((t,i)=><div className="owner-row" key={t.id||i}><div><strong>{t.title}</strong><small>{t.category} · {t.priority} · {t.status}</small></div><button className="owner-ghost" disabled={busyAction===t.id} onClick={()=>void updateTask(String(t.id),'done')}>DONE</button></div>)}{!tasks.length?<div className="owner-empty">No owner actions waiting.</div>:null}</div>}
+function CandidateList({candidates,busyAction,updateCandidate}:{candidates:Candidate[],busyAction:string,updateCandidate:(id:string,status:string)=>Promise<void>}){return <div className="owner-list sourcing-list">{candidates.map((c)=><div className="owner-row sourcing-row" key={c.candidate_code}><div><div className="candidate-meta"><span>P{c.priority}</span><span>{c.category}</span><span>{c.supplier_name}</span></div><strong>{c.brand} · {c.proposed_name}</strong><small>{c.candidate_code} · SKU {c.manufacturer_sku||'PENDING'} · {String(c.evidence_status||'').replaceAll('_',' ')}</small></div><div className="candidate-actions"><span className={`owner-status status-${c.status}`}>{c.status}</span>{c.status==='hold'?<button className="owner-ghost" disabled={busyAction===c.id} onClick={()=>void updateCandidate(String(c.id),'evidence_requested')}>REQUEST EVIDENCE</button>:null}</div></div>)}{!candidates.length?<div className="owner-empty">No candidates initialized. Seed the vetted HOLD intake to begin supplier review.</div>:null}</div>}

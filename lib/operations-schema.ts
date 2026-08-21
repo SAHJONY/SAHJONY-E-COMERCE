@@ -30,6 +30,27 @@ async function createOperationsSchema() {
     updated_at timestamptz not null default now()
   )`;
 
+  await sql`create table if not exists public.sourcing_candidates (
+    id uuid primary key default gen_random_uuid(),
+    candidate_code text not null unique,
+    supplier_account_id uuid references public.supplier_accounts(id) on delete set null,
+    priority integer not null default 3 check (priority between 1 and 5),
+    category text not null,
+    brand text not null,
+    proposed_name text,
+    manufacturer_sku text,
+    status text not null default 'hold',
+    evidence_status text not null,
+    target_price_cents bigint,
+    proposed_inventory integer not null default 0 check (proposed_inventory >= 0),
+    verification_method text,
+    image_rights_status text not null default 'unverified',
+    fulfillment_status text not null default 'unverified',
+    notes text,
+    created_at timestamptz not null default now(),
+    updated_at timestamptz not null default now()
+  )`;
+
   await sql`create table if not exists public.purchase_orders (
     id uuid primary key default gen_random_uuid(),
     po_number text not null unique,
@@ -82,6 +103,8 @@ async function createOperationsSchema() {
 
   await sql`create index if not exists supplier_accounts_status_idx on public.supplier_accounts(status, updated_at desc)`;
   await sql`create index if not exists product_operations_supplier_idx on public.product_operations(supplier_account_id)`;
+  await sql`create index if not exists sourcing_candidates_status_idx on public.sourcing_candidates(status, priority, updated_at desc)`;
+  await sql`create index if not exists sourcing_candidates_supplier_idx on public.sourcing_candidates(supplier_account_id, status)`;
   await sql`create index if not exists purchase_orders_status_idx on public.purchase_orders(status, created_at desc)`;
   await sql`create index if not exists purchase_order_items_po_idx on public.purchase_order_items(purchase_order_id)`;
   await sql`create index if not exists owner_tasks_status_idx on public.owner_tasks(status, priority, created_at desc)`;
