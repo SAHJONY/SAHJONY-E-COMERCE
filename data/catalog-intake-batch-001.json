@@ -1,5 +1,5 @@
 {
-  "batchId": "catalog-intake-001",
+  "batchId": "catalog-intake-002",
   "status": "HOLD",
   "policy": "Candidate records only. No item may be activated or sourceVerified until SAHJONY holds qualifying commercial evidence and current inventory is confirmed.",
   "candidates": [
@@ -27,6 +27,9 @@
     {"candidateId":"MBR-002","priority":1,"category":"premium-multibrand","sourceProgram":"Stratum Co.","brand":"Calvin Klein","product":"TBD after live inventory access","sku":"PENDING","priceCents":0,"inventoryQuantity":0,"isActive":false,"sourceVerified":false,"verificationMethod":null,"evidenceStatus":"authorized_wholesale_invoice_required"},
     {"candidateId":"MBR-003","priority":2,"category":"premium-multibrand","sourceProgram":"Stratum Co.","brand":"Michael Kors","product":"TBD after live inventory access","sku":"PENDING","priceCents":0,"inventoryQuantity":0,"isActive":false,"sourceVerified":false,"verificationMethod":null,"evidenceStatus":"authorized_wholesale_invoice_required"},
     {"candidateId":"MBR-004","priority":2,"category":"premium-multibrand","sourceProgram":"Stratum Co.","brand":"Tommy Hilfiger","product":"TBD after live inventory access","sku":"PENDING","priceCents":0,"inventoryQuantity":0,"isActive":false,"sourceVerified":false,"verificationMethod":null,"evidenceStatus":"authorized_wholesale_invoice_required"},
-    {"candidateId":"MBR-005","priority":3,"category":"premium-multibrand","sourceProgram":"Stratum Co.","brand":"Hugo Boss","product":"TBD after live inventory access","sku":"PENDING","priceCents":0,"inventoryQuantity":0,"isActive":false,"sourceVerified":false,"verificationMethod":null,"evidenceStatus":"authorized_wholesale_invoice_required"}
+    {"candidateId":"MBR-005","priority":3,"category":"premium-multibrand","sourceProgram":"Stratum Co.","brand":"Hugo Boss","product":"TBD after live inventory access","sku":"PENDING","priceCents":0,"inventoryQuantity":0,"isActive":false,"sourceVerified":false,"verificationMethod":null,"evidenceStatus":"authorized_wholesale_invoice_required"},
+    {"candidateId":"OUT-001","priority":1,"category":"multi-category-wholesale","sourceProgram":"Faire Wholesale","brand":"Independent premium brands","product":"TBD after verified retailer catalog access","sku":"PENDING","priceCents":0,"inventoryQuantity":0,"isActive":false,"sourceVerified":false,"verificationMethod":null,"evidenceStatus":"verified_retailer_account_and_wholesale_invoice_required"},
+    {"candidateId":"OUT-002","priority":2,"category":"fashion-liquidation","sourceProgram":"B-Stock Contemporary Fashion","brand":"Manifested contemporary fashion lots","product":"TBD after lot manifest and condition review","sku":"PENDING","priceCents":0,"inventoryQuantity":0,"isActive":false,"sourceVerified":false,"verificationMethod":null,"evidenceStatus":"reseller_certificate_manifest_channel_terms_and_invoice_required"},
+    {"candidateId":"OUT-003","priority":3,"category":"market-intelligence","sourceProgram":"ShopSimon","brand":"Outlet marketplace assortment","product":"Affiliate intelligence only — not approved inventory","sku":"PENDING","priceCents":0,"inventoryQuantity":0,"isActive":false,"sourceVerified":false,"verificationMethod":null,"evidenceStatus":"affiliate_terms_or_written_resale_authorization_required"}
   ]
 }
