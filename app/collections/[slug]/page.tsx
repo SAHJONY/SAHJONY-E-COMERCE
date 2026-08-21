@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { collectionTitles, publicProducts } from "@/lib/public-catalog";
+import SiteHeader from "@/app/components/SiteHeader";
+import SiteFooter from "@/app/components/SiteFooter";
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -11,12 +13,8 @@ export default async function CollectionPage({ params }: Props) {
   const products = publicProducts.filter((product) => product.collection === slug);
 
   return (
-    <main className="collection-page">
-      <nav className="nav nav-dark">
-        <Link className="nav-back" href="/">← SAHJONY</Link>
-        <Link className="wordmark wordmark-light" href="/">SAHJONY</Link>
-        <div className="nav-actions nav-actions-light"><Link href="/">HOME</Link><a href="#pieces">THE EDIT</a><button aria-label="Shopping bag">BAG · 0</button></div>
-      </nav>
+    <main className="collection-page" id="main-content">
+      <SiteHeader />
 
       <header className="collection-hero">
         <div className="collection-hero-shade"></div>
@@ -41,6 +39,7 @@ export default async function CollectionPage({ params }: Props) {
       </section>
 
       <section className="collection-service"><p className="micro light">SAHJONY PRIVATE CLIENT</p><h2>Need something more specific?</h2><p>Our client services team can assist with premium product discovery, gifting and special requests.</p><a className="button-glass" href="mailto:clientservices@sahjony.com">CONTACT CLIENT SERVICES</a></section>
+      <SiteFooter />
     </main>
   );
 }

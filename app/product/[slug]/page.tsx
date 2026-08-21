@@ -1,7 +1,8 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import ProductActions from "@/app/components/ProductActions";
 import { publicProducts } from "@/lib/public-catalog";
+import SiteHeader from "@/app/components/SiteHeader";
+import SiteFooter from "@/app/components/SiteFooter";
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -11,12 +12,8 @@ export default async function ProductPage({ params }: Props) {
   if (!product) notFound();
 
   return (
-    <main className="pdp">
-      <nav className="nav pdp-nav">
-        <Link className="nav-back" href={`/collections/${product.collection}`}>← {product.category.toUpperCase()}</Link>
-        <Link className="wordmark" href="/">SAHJONY</Link>
-        <div className="nav-actions"><button aria-label="Search">SEARCH</button><Link href="/bag">BAG</Link></div>
-      </nav>
+    <main className="pdp" id="main-content">
+      <SiteHeader tone="light" />
 
       <section className="pdp-stage">
         <div className="pdp-gallery">{product.gallery.map((image, index) => <div className="pdp-image" key={image} style={{ backgroundImage: `url(${image})` }}><span>0{index + 1}</span></div>)}</div>
@@ -31,7 +28,7 @@ export default async function ProductPage({ params }: Props) {
       </section>
 
       <section className="pdp-story"><p className="micro light">THE SAHJONY EDIT</p><h2>Objects worth<br/><em>remembering.</em></h2><p>Every piece is presented with the same philosophy: exceptional product, exceptional visual clarity and no unnecessary distraction.</p></section>
-      <footer className="pdp-footer"><Link className="wordmark footer-mark" href="/">SAHJONY</Link><span>PREMIUM BRANDS FOR LESS</span><Link href={`/collections/${product.collection}`}>BACK TO {product.category.toUpperCase()} ↑</Link></footer>
+      <SiteFooter />
     </main>
   );
 }

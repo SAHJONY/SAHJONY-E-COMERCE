@@ -21,7 +21,7 @@ export default function ProductActions({ slug, name, price }: Props) {
   const [added, setAdded] = useState(false);
   const [saved, setSaved] = useState(false);
 
-  useEffect(() => { setSaved(readSaved().includes(slug)); }, [slug]);
+  useEffect(() => { queueMicrotask(() => setSaved(readSaved().includes(slug))); }, [slug]);
 
   function addToBag() {
     const bag = readBag();
