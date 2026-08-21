@@ -23,6 +23,7 @@ type CommandCenter = {
 type Product = { slug?: string; sku?: string; brand?: string; name?: string; inventory_quantity?: number; is_active?: boolean; source_verified?: boolean; price_cents?: number };
 
 const tabs = ['overview','orders','catalog','inventory','procurement','customers','finance','analytics','audit','system'] as const;
+const tabLabels: Record<Tab,string> = { overview:'Command', orders:'Orders', catalog:'Catalog', inventory:'Inventory', procurement:'Sourcing', customers:'Clients', finance:'Finance', analytics:'Intelligence', audit:'Audit', system:'System' };
 type Tab = typeof tabs[number];
 const money = (cents?: number) => `$${(Number(cents || 0) / 100).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}`;
 const pct = (value?: number) => `${(Number(value || 0) * 100).toFixed(2)}%`;
@@ -105,17 +106,18 @@ export default function OwnerPage() {
   const launchTotal = Object.keys(readiness?.checks||{}).length;
 
   if(!authorized){
-    return <main className="owner-shell"><div className="owner-login"><div className="owner-eyebrow">SAHJONY / PRIVATE COMMERCE OS</div><h1>Owner access.</h1><p>One private operating system for the entire commerce business. Your token stays in this browser session and is sent only to owner-only APIs.</p><form onSubmit={submit}><input className="owner-input" type="password" value={token} onChange={e=>setToken(e.target.value)} placeholder="OWNER_OPERATIONS_TOKEN" autoComplete="off"/><button className="owner-primary" disabled={loading}>{loading?'CONNECTING…':'ENTER OWNER OS'}</button></form>{error?<div className="owner-error">{error}</div>:null}<p className="owner-note">Platform: {readiness?.ready?'READY':'GATED'} · Sellable products: {readiness?.verifiedSellableProducts??0}</p></div></main>;
+    return <main className="owner-shell owner-access-shell"><div className="owner-access-art" aria-hidden="true"><span>PRIVATE<br/>COMMERCE<br/>OS</span><i>SAHJONY / OWNER</i></div><div className="owner-login"><Link className="owner-login-mark" href="/">SAHJONY</Link><div className="owner-eyebrow">SECURE OWNER OPERATIONS</div><h1>Your business,<br/><em>in command.</em></h1><p>Enter the private owner token to access revenue, orders, inventory, sourcing, clients and system health.</p><form onSubmit={submit}><label htmlFor="owner-token">OWNER OPERATIONS TOKEN</label><div className="owner-login-control"><input id="owner-token" className="owner-input" type="password" value={token} onChange={e=>setToken(e.target.value)} placeholder="Enter secure token" autoComplete="current-password" required/><button className="owner-primary" disabled={loading}>{loading?'CONNECTING…':'ENTER COMMAND CENTER →'}</button></div></form>{error?<div className="owner-error" role="alert">{error}</div>:null}<div className="owner-access-status"><span className={readiness?.ready?'online':'gated'}>{readiness?.ready?'SYSTEM READY':'SYSTEM GATED'}</span><span>{readiness?.verifiedSellableProducts??0} SELLABLE PRODUCTS</span><span>SESSION-ONLY CREDENTIAL</span></div></div></main>;
   }
 
   return <main className="owner-shell">
-    <header className="owner-top"><div className="owner-brand"><span className="owner-mark">SAHJONY</span><span className="owner-kicker">Commerce Operating System</span></div><div className="owner-top-actions"><button className="owner-ghost" onClick={()=>void loadOwnerData(token)}>Refresh</button><button className="owner-ghost" onClick={signOut}>End Session</button><Link className="owner-link" href="/">Storefront ↗</Link></div></header>
+    <header className="owner-top"><div className="owner-brand"><span className="owner-mark">SAHJONY</span><span className="owner-kicker">Owner Commerce OS <i>LIVE</i></span></div><div className="owner-top-actions"><span className="owner-sync">{loading?'SYNCING':'SYNCED'} · {command?.generatedAt?new Date(command.generatedAt).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}):'—'}</span><button className="owner-ghost owner-refresh" onClick={()=>void loadOwnerData(token)} disabled={loading}>↻ Refresh</button><Link className="owner-link" href="/">View store ↗</Link><button className="owner-session" onClick={signOut} aria-label="End owner session">END SESSION</button></div></header>
 
-    <section className="owner-heading"><div><div className="owner-eyebrow">OWNER COMMAND CENTER / LIVE BUSINESS CONTROL</div><h1>Run the entire store.</h1></div><p>Revenue, customers, inventory, procurement, fulfillment, analytics, approvals and system health—controlled from one private operating layer.</p></section>
+    <section className="owner-heading"><div><div className="owner-eyebrow">EXECUTIVE COMMAND CENTER / {new Date().toLocaleDateString(undefined,{month:'long',day:'numeric',year:'numeric'}).toUpperCase()}</div><h1>Good to see you.<br/><em>Here&apos;s the business.</em></h1></div><div className="owner-heading-status"><span className={readiness?.ready?'online':'gated'}>{readiness?.ready?'ALL SYSTEMS READY':'LAUNCH GATES ACTIVE'}</span><p>Revenue, clients, inventory, sourcing and fulfillment—one private operating view.</p></div></section>
 
-    <nav className="owner-tabs">{tabs.map(item=><button key={item} className={`owner-tab ${tab===item?'active':''}`} onClick={()=>setTab(item)}>{item}</button>)}</nav>
-    {error?<div className="owner-error">{error}</div>:null}
-    {loading?<div className="owner-loading">REFRESHING OPERATIONS…</div>:null}
+    <nav className="owner-tabs" aria-label="Owner workspaces" role="tablist">{tabs.map((item,index)=><button key={item} role="tab" aria-selected={tab===item} className={`owner-tab ${tab===item?'active':''}`} onClick={()=>setTab(item)}><span>{String(index+1).padStart(2,'0')}</span>{tabLabels[item]}</button>)}</nav>
+    <div className="owner-pulse"><div><span>REVENUE TODAY</span><b>{money(exec.revenueTodayCents)}</b></div><div><span>OPEN ORDERS</span><b>{String(exec.openOrders||0)}</b></div><div><span>SELLABLE SKUS</span><b>{String(inv.sellableProducts||0)}</b></div><div><span>CONVERSION</span><b>{pct(exec.conversionRate)}</b></div><div><span>ACTIONS</span><b>{String(activeTasks.length)}</b></div></div>
+    {error?<div className="owner-error" role="alert">{error}</div>:null}
+    {loading?<div className="owner-loading" role="status"><span/>REFRESHING LIVE OPERATIONS</div>:null}
 
     <section className={`owner-module ${tab==='overview'?'active':''}`}>
       <div className="owner-grid">
