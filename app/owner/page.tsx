@@ -23,8 +23,8 @@ type CommandCenter = {
 type Product = { slug?: string; sku?: string; brand?: string; name?: string; inventory_quantity?: number; is_active?: boolean; source_verified?: boolean; price_cents?: number };
 type Candidate = { id?: string; candidate_code?: string; priority?: number; category?: string; brand?: string; proposed_name?: string; manufacturer_sku?: string; status?: string; evidence_status?: string; supplier_name?: string; supplier_status?: string; supplier_source_type?: string };
 
-const tabs = ['overview','orders','catalog','inventory','procurement','customers','finance','analytics','audit','system'] as const;
-const tabLabels: Record<Tab,string> = { overview:'Command', orders:'Orders', catalog:'Catalog', inventory:'Inventory', procurement:'Sourcing', customers:'Clients', finance:'Finance', analytics:'Intelligence', audit:'Audit', system:'System' };
+const tabs = ['overview','orders','catalog','inventory','procurement','communications','customers','finance','analytics','audit','system'] as const;
+const tabLabels: Record<Tab,string> = { overview:'Command', orders:'Orders', catalog:'Catalog', inventory:'Inventory', procurement:'Sourcing', communications:'Comms', customers:'Clients', finance:'Finance', analytics:'Intelligence', audit:'Audit', system:'System' };
 type Tab = typeof tabs[number];
 const money = (cents?: number) => `$${(Number(cents || 0) / 100).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}`;
 const pct = (value?: number) => `${(Number(value || 0) * 100).toFixed(2)}%`;
@@ -35,6 +35,7 @@ export default function OwnerPage() {
   const [command,setCommand] = useState<CommandCenter | null>(null);
   const [products,setProducts] = useState<Product[]>([]);
   const [candidates,setCandidates] = useState<Candidate[]>([]);
+  const [communications,setCommunications] = useState<Row>({departments:[],messages:[]});
   const [authorized,setAuthorized] = useState(false);
   const [loading,setLoading] = useState(false);
   const [error,setError] = useState('');
@@ -61,17 +62,18 @@ export default function OwnerPage() {
     setLoading(true); setError(''); await loadReadiness();
     try {
       const headers = {'x-owner-token':ownerToken};
-      const [ccRes,catRes,sourceRes] = await Promise.all([
+      const [ccRes,catRes,sourceRes,communicationsRes] = await Promise.all([
         fetch('/api/owner/command-center',{headers,cache:'no-store'}),
         fetch('/api/owner/catalog',{headers,cache:'no-store'}),
         fetch('/api/owner/sourcing',{headers,cache:'no-store'}),
+        fetch('/api/owner/communications',{headers,cache:'no-store'}),
       ]);
       if (ccRes.status===401 || catRes.status===401 || sourceRes.status===401) {
         sessionStorage.removeItem('sahjony-owner-token'); setAuthorized(false); setCommand(null); setProducts([]); setError('Owner credentials were not accepted.'); return;
       }
       if (!ccRes.ok || !catRes.ok || !sourceRes.ok) { setAuthorized(false); setError('Owner operations are not fully configured in this environment.'); return; }
-      const [cc,catalog,sourcing] = await Promise.all([ccRes.json(),catRes.json(),sourceRes.json()]);
-      setCommand(cc); setProducts(Array.isArray(catalog.products)?catalog.products:[]); setCandidates(Array.isArray(sourcing.candidates)?sourcing.candidates:[]); setAuthorized(true); sessionStorage.setItem('sahjony-owner-token',ownerToken);
+      const [cc,catalog,sourcing,comms] = await Promise.all([ccRes.json(),catRes.json(),sourceRes.json(),communicationsRes.json()]);
+      setCommand(cc); setProducts(Array.isArray(catalog.products)?catalog.products:[]); setCandidates(Array.isArray(sourcing.candidates)?sourcing.candidates:[]); setCommunications(comms||{departments:[],messages:[]}); setAuthorized(true); sessionStorage.setItem('sahjony-owner-token',ownerToken);
     } catch { setAuthorized(false); setError('Unable to reach owner operations.'); }
     finally { setLoading(false); }
   }
@@ -127,6 +129,14 @@ export default function OwnerPage() {
     } catch { setError('The supplier onboarding request could not be recorded.'); } finally { setBusyAction(''); }
   }
 
+  async function configureEmail(action:'initialize_email_domain'|'verify_email_domain'){
+    setBusyAction('email-domain'); setError('');
+    try{
+      const r=await fetch('/api/owner/communications',{method:'POST',headers:{'content-type':'application/json','x-owner-token':token},body:JSON.stringify({action})});
+      const result=await r.json(); if(!r.ok) throw new Error(result.error||'communications'); setCommunications((current:Row)=>({...current,...result}));
+    }catch(error){setError(error instanceof Error?error.message:'Email domain setup could not complete.')}finally{setBusyAction('')}
+  }
+
   const exec = command?.executive || {}; const inv = command?.inventory || {}; const ful = command?.fulfillment || {}; const pro = command?.procurement || {}; const ana = command?.analytics || {}; const fin = command?.finance || {};
   const activeTasks = command?.tasks || [];
   const launchPassed = useMemo(()=>Object.values(readiness?.checks||{}).filter(Boolean).length,[readiness]);
@@ -174,6 +184,8 @@ export default function OwnerPage() {
 
     <section className={`owner-module ${tab==='procurement'?'active':''}`}><div className="owner-grid"><Metric label="Sourcing candidates" value={String(candidates.length)}/><Metric label="Priority one" value={String(candidates.filter(c=>c.priority===1).length)}/><Metric label="Evidence received" value={String(candidates.filter(c=>c.status==='evidence_received').length)}/><Metric label="Supplier programs" value={String((pro.suppliers||[]).length)}/><Panel title="Catalog Sourcing Pipeline" meta="FAIL-CLOSED" span="8"><div className="sourcing-toolbar"><p className="owner-note">Candidates remain private and unsellable until exact SKU, commercial evidence, inventory, image rights, price and fulfillment terms all pass review. Affiliate-only outlets can support intelligence, never inventory activation.</p><button className="owner-primary" onClick={()=>void seedSourcing()} disabled={busyAction==='seed-sourcing'}>{busyAction==='seed-sourcing'?'INITIALIZING…':candidates.length?'SYNC VETTED INTAKE':'INITIALIZE SOURCING'}</button></div><CandidateList candidates={candidates} busyAction={busyAction} updateCandidate={updateCandidate}/></Panel><Panel title="Supplier Onboarding" meta="ONE REQUEST / PROGRAM" span="4"><SupplierNetwork suppliers={pro.suppliers||[]} busyAction={busyAction} requestSupplierEvidence={requestSupplierEvidence}/></Panel></div></section>
 
+    <section className={`owner-module ${tab==='communications'?'active':''}`}><div className="owner-grid"><Metric label="Department channels" value={String((communications.departments||[]).length)}/><Metric label="Domain status" value={String(communications.domain?.status||'NOT INITIALIZED').replaceAll('_',' ')}/><Metric label="Inbound messages" value={String((communications.messages||[]).filter((m:Row)=>m.direction==='inbound').length)}/><Metric label="Provider" value={communications.configured?'RESEND FREE':'GATED'}/><Panel title="Department Email Network" meta="SAHJONY.COM" span="7"><p className="owner-note">Every address routes into the private communications ledger. Channels remain gated until SPF, DKIM and inbound MX records verify.</p><div className="owner-actions"><button className="owner-primary" disabled={busyAction==='email-domain'} onClick={()=>void configureEmail(communications.domain?'verify_email_domain':'initialize_email_domain')}>{busyAction==='email-domain'?'WORKING…':communications.domain?'VERIFY DNS':'INITIALIZE DOMAIN'}</button></div><DepartmentChannels departments={communications.departments||[]} domainStatus={communications.domain?.status}/></Panel><Panel title="DNS Verification" meta={communications.domain?.status||'PENDING'} span="5"><DnsRecords records={communications.domain?.records||[]}/></Panel><Panel title="Communications Ledger" meta="LATEST 30" span="12"><CommunicationList messages={communications.messages||[]}/></Panel></div></section>
+
     <section className={`owner-module ${tab==='customers'?'active':''}`}><div className="owner-grid"><Metric label="Customers" value={String(exec.customers||0)}/><Metric label="Repeat customers" value={String(exec.repeatCustomers||0)}/><Metric label="Avg customer value" value={money(exec.averageCustomerValueCents)}/><Metric label="Paid orders 30d" value={String(exec.paidOrders30d||0)}/><Panel title="Customer Intelligence" meta="CRM FOUNDATION" span="12"><p className="owner-note">Customer profiles are created from commerce activity and orders. This module will become the Private Client, retention and lifetime-value workspace as transaction history accumulates.</p></Panel></div></section>
 
     <section className={`owner-module ${tab==='finance'?'active':''}`}><div className="owner-grid"><Metric label="Revenue 30d" value={money(fin.revenue30dCents)}/><Metric label="Inventory cost basis" value={money(fin.inventoryCostBasisCents)}/><Metric label="AOV" value={money(exec.averageOrderValueCents)}/><Metric label="Margin data" value={fin.grossMarginStatus==='cost_data_available'?'AVAILABLE':'AWAITING COSTS'}/><Panel title="Finance Control" meta="UNIT ECONOMICS" span="12"><p className="owner-note">Private product operations store unit cost separately from the public catalog. Once costs are entered, this layer supports gross margin, inventory investment and SKU profitability without exposing sourcing economics publicly.</p></Panel></div></section>
@@ -196,3 +208,6 @@ function ProductList({products}:{products:Product[]}){return <div className="own
 function TaskList({tasks,busyAction,updateTask}:{tasks:Row[],busyAction:string,updateTask:(id:string,status:string)=>Promise<void>}){return <div className="owner-list">{tasks.slice(0,10).map((t,i)=><div className="owner-row" key={t.id||i}><div><strong>{t.title}</strong><small>{t.category} · {t.priority} · {t.status}</small></div><button className="owner-ghost" disabled={busyAction===t.id} onClick={()=>void updateTask(String(t.id),'done')}>DONE</button></div>)}{!tasks.length?<div className="owner-empty">No owner actions waiting.</div>:null}</div>}
 function SupplierNetwork({suppliers,busyAction,requestSupplierEvidence}:{suppliers:Row[],busyAction:string,requestSupplierEvidence:(id:string)=>Promise<void>}){return <div className="owner-list">{suppliers.map((s)=><div className="owner-row supplier-onboarding-row" key={s.id}><div><strong>{s.display_name}</strong><small>{s.code} · {String(s.source_type||'source type pending').replaceAll('_',' ')}</small></div><div className="candidate-actions"><span className={`owner-status status-${s.status}`}>{String(s.status).replaceAll('_',' ')}</span>{s.status==='prospect'?<button className="owner-ghost" disabled={busyAction===`supplier-${s.id}`} onClick={()=>void requestSupplierEvidence(String(s.id))}>{s.source_type==='market_intelligence_affiliate_only'?'REVIEW TERMS':'REQUEST ONCE'}</button>:null}</div></div>)}{!suppliers.length?<div className="owner-empty">Initialize sourcing to register the approved prospect programs.</div>:null}</div>}
 function CandidateList({candidates}:{candidates:Candidate[],busyAction:string,updateCandidate:(id:string,status:string)=>Promise<void>}){return <div className="owner-list sourcing-list">{candidates.map((c)=><div className="owner-row sourcing-row" key={c.candidate_code}><div><div className="candidate-meta"><span>P{c.priority}</span><span>{c.category}</span><span>{c.supplier_name}</span>{c.supplier_source_type?<span>{String(c.supplier_source_type).replaceAll('_',' ')}</span>:null}</div><strong>{c.brand} · {c.proposed_name}</strong><small>{c.candidate_code} · SKU {c.manufacturer_sku||'PENDING'} · {String(c.evidence_status||'').replaceAll('_',' ')}</small></div><div className="candidate-actions"><span className={`owner-status status-${c.status}`}>{String(c.status).replaceAll('_',' ')}</span></div></div>)}{!candidates.length?<div className="owner-empty">No candidates initialized. Seed the vetted HOLD intake to begin supplier review.</div>:null}</div>}
+function DepartmentChannels({departments,domainStatus}:{departments:Row[],domainStatus?:string}){return <div className="department-grid">{departments.map((d)=><a href={`mailto:${d.address}`} key={d.key}><strong>{d.label}</strong><small>{d.address}</small><span className={`owner-status ${domainStatus==='verified'?'status-approved':''}`}>{domainStatus==='verified'?'LIVE':'GATED'}</span></a>)}</div>}
+function DnsRecords({records}:{records:Row[]}){return <div className="owner-list dns-records">{records.map((r,i)=><div className="owner-row" key={`${r.type}-${r.name}-${i}`}><div><strong>{r.record} · {r.type}</strong><small>{r.name} → {r.value}</small></div><span className={`owner-status ${r.status==='verified'?'status-approved':''}`}>{r.status||'pending'}</span></div>)}{!records.length?<div className="owner-empty">Initialize the domain to generate provider-specific DNS records.</div>:null}</div>}
+function CommunicationList({messages}:{messages:Row[]}){return <div className="owner-list">{messages.map((m)=><div className="owner-row" key={m.id}><div><strong>{m.subject||'(no subject)'}</strong><small>{m.direction} · {m.department} · {m.from_address||'system'}</small></div><span className="owner-status">{String(m.status).replace('email.','')}</span></div>)}{!messages.length?<div className="owner-empty">No communication events received yet.</div>:null}</div>}
